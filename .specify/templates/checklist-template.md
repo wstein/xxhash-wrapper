@@ -20,11 +20,14 @@
   ============================================================================
 -->
 
-## [Category 1]
+## Constitution Compliance
 
-- [ ] CHK001 First checklist item with clear action
-- [ ] CHK002 Second checklist item
-- [ ] CHK003 Third checklist item
+- [ ] CHK-CC-001 Unit tests added and passing for all new logic
+- [ ] CHK-CC-002 SIMD/platform tests present for SIMD code paths and CI matrix
+- [ ] CHK-CC-003 Fuzz harness + seed corpus included (or CI ticket for OSS‑Fuzz)
+- [ ] CHK-CC-004 Benchmarks added and baseline recorded in CI
+- [ ] CHK-CC-005 ABI/packaging verification present for public API changes
+- [ ] CHK-CC-006 Release notes, migration guide, and docs updated as needed
 
 ## [Category 2]
 

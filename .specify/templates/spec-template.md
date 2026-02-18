@@ -95,6 +95,22 @@
 - **FR-006**: System MUST authenticate users via [NEEDS CLARIFICATION: auth method not specified - email/password, SSO, OAuth?]
 - **FR-007**: System MUST retain user data for [NEEDS CLARIFICATION: retention period not specified]
 
+### Non‑functional Requirements (mandatory)
+
+- **NFR-001**: Implementation MUST match canonical xxHash outputs for all inputs
+  (validated by unit + fuzz/property tests).
+- **NFR-002**: SIMD optimizations MUST include scalar fallback, runtime dispatch,
+  and vector‑width/alignment tests for each supported CPU target.
+- **NFR-003**: CI MUST run unit, SIMD/platform, fuzz, ABI, and benchmark checks
+  for changes that touch those domains.
+- **NFR-004**: Performance‑sensitive changes MUST include microbenchmarks and a
+  documented baseline; regressions beyond the documented tolerance MUST be
+  resolved before merging.
+- **NFR-005**: Releases and build artifacts MUST be reproducible (pinned
+  toolchain, deterministic flags) and include changelogs and migration notes.
+- **NFR-006**: Public API/ABI changes MUST include an ABI compatibility report
+  and migration plan; such changes SHOULD trigger a MAJOR version bump.
+
 ### Key Entities *(include if feature involves data)*
 
 - **[Entity 1]**: [What it represents, key attributes without implementation]

@@ -68,6 +68,11 @@ Examples of foundational tasks (adjust based on your project):
 - [ ] T007 Create base models/entities that all stories depend on
 - [ ] T008 Configure error handling and logging infrastructure
 - [ ] T009 Setup environment configuration management
+- [ ] T100 Configure CI job matrix for SIMD/platform tests (x86_64, aarch64, macOS)
+- [ ] T101 Add microbenchmark harness and baseline datasets (XXH3 64/128)
+- [ ] T102 Integrate fuzzing harness and initial seed corpus (libFuzzer/OSS-Fuzz)
+- [ ] T103 Add automated ABI/regression checks and packaging verification
+- [ ] T104 Enable reproducible build tooling and pin toolchain in CI
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 

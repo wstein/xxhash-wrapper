@@ -31,7 +31,17 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+Constitution gates (project-level — MUST be satisfied before Phase 0 and re‑checked after Phase 1 design):
+
+- Unit tests for any new or changed logic (failures block progression).
+- SIMD/platform tests when SIMD or vectorized code is added or changed.
+- Fuzz/property tests for changes that affect input handling or hashing contracts.
+- ABI/packaging verification for changes to public API or exported symbols.
+- Microbenchmarks for performance‑sensitive changes; record baseline and
+  acceptable tolerance in the plan.
+- Reproducible build verification for release artifacts and pinned toolchain.
+- CI green: unit + SIMD/platform + fuzz + ABI checks for relevant changes; any
+  gate failure MUST be addressed before merge.
 
 ## Project Structure
 
