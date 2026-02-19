@@ -52,6 +52,7 @@
 - [x] Both dynamic + static linking (FR-014)
 - [x] C99 language standard for wrapper code (FR-015)
 - [x] xxh32 (legacy, 32-bit, scalar-only) and xxh64 (traditional, 64-bit, scalar-only) exported (FR-016)
+- [x] Numeric Quad versioning scheme (e.g., MAJOR.MINOR.PATCH.WRAPPER_PATCH) followed (FR-017)
 
 ## Feature Readiness
 

@@ -107,6 +107,7 @@ Users and CI verify that the library produces correct hashing output across all 
 - **FR-014**: Library MUST support both dynamic (runtime) linking and static linking for all platforms.
 - **FR-015**: All wrapper source code (`src/`, `include/`) MUST conform to the **C99 language standard** (`-std=c99`). No C11 or compiler-specific extensions (GNU/Clang) are permitted in wrapper code. The vendored xxHash library is compiled as upstream provides it (also C99-compatible).
 - **FR-016**: Library MUST export **legacy and traditional scalar-only** hash functions: `uint32_t xxh32(const void* input, size_t size, uint32_t seed)` (legacy, 32-bit output) and `uint64_t xxh64(const void* input, size_t size, uint64_t seed)` (traditional, 64-bit output). These have **no SIMD variants** and **no variant suffix** in their symbol name. Both functions are always exported on all platforms. `xxh64()` is recommended as a high-performance scalar alternative when SIMD is not available, as it may outperform `xxh3_64_scalar()` on CPUs without SIMD acceleration.
+- **FR-017**: Library MUST follow a **four-digit (Numeric Quad) versioning scheme**: `MAJOR.MINOR.PATCH.WRAPPER_PATCH`. The first three digits MUST match the version of the vendored xxHash library (e.g., `0.8.3`). The fourth digit is reserved for the wrapper project's own patches or ABI-compatible fixes (e.g., `0.8.3.0`, `0.8.3.1`).
 
 ### Key Entities
 
@@ -153,6 +154,7 @@ Users and CI verify that the library produces correct hashing output across all 
 
 - Q: Does the library implement internal CPU dispatch (vendor's CPUID/function-pointer mechanism)? → A: **No. The library exports each SIMD variant as a separately named function; consumers implement their own dispatch or selection logic.**
 - Q: Language standard for all wrapper source code? → A: **C99 (`-std=c99`)** — no C11 or compiler extensions in `src/` or `include/`.
+- Q: How is the wrapper versioned? → A: **Numeric Quad (`MAJOR.MINOR.PATCH.WRAPPER_PATCH`)**. Major/Minor/Patch must match the vendored xxHash version. The fourth digit is for the wrapper itself (e.g., `0.8.3.0`).
 - Q: Which hash algorithms are exported, and with what variant structure? → A: **XXH3-64 and XXH3-128 with scalar + SIMD variants** (named `xxh3_64_<variant>`, `xxh3_128_<variant>`); plus **xxh32 (legacy)** and **xxh64 (traditional)** as scalar-only flat functions with no variant suffix. `xxh64()` is recommended as the scalar fallback when no SIMD is available.
 
 ## Assumptions
@@ -162,6 +164,7 @@ Users and CI verify that the library produces correct hashing output across all 
   - **x86/x64**: All SIMD variants (scalar, SSE2, AVX2, AVX512) are compiled into every x86/x64 build and exported as distinct symbols. The library does **not** use the vendor's internal dispatcher (`XXH_DISPATCH_FUNCS` / `XXH_featureTest`). Consumers implement CPU detection (CPUID + XGETBV) and call the appropriate variant symbol.
   - **ARM aarch64**: NEON and SVE variant symbols are exported only when the library is built targeting aarch64 (via `meson setup -Dcpu_family=aarch64`). Scalar is always exported. No runtime detection in the library.
 - **Language Standard**: All wrapper code (`src/`, `include/`) is C99 (`-std=c99`). No C11 or GCC/Clang extensions.
+- **Versioning**: Numeric Quad (`MAJOR.MINOR.PATCH.WRAPPER_PATCH`). First 3 digits match vendor xxHash. The fourth digit is for the wrapper project itself.
 - **Build System**: Meson is the primary build tool; no CMake or Makefile.
 - **API Scope**: Both **single-shot** (`xxh3_64_<variant>()`, `xxh3_128_<variant>()`) and **streaming** (`xxh3_64_<variant>_reset/update/digest`) APIs are public per XXH3 variant; both seed-based and secret-based variants exposed. Additionally, scalar-only `xxh32()` and `xxh64()` are always exported (no streaming, no SIMD variants).
 - **Linking**: Library is distributed as compiled artifacts (static + shared); no header-only mode (users must link against library).
