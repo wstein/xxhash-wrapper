@@ -762,3 +762,41 @@ The project requires a testing framework that aligns with:
 * **CI Integration**: Native Meson test runner support
 * **Maintainability**: Clear test structure for future contributors
 * **Performance Focus**: Low overhead preserves benchmark accuracy
+
+''''''
+
+=== 22. XXH32 and XXH64 Streaming & Secret Exports
+
+==== 22.1 Decision: Extend xxh32/xxh64 to include Streaming Variants
+
+[IMPORTANT]
+**FINAL DECISION**: The library will export **full streaming APIs for both xxh32 and xxh64**, in addition to their single-shot variants.
+
+This decision was made to provide API consistency with XXH3 and enable downstream consumers (e.g., cr-xxhash) to use a uniform hashing interface with selective algorithm choice.
+
+==== 22.2 Scope
+
+* **xxh32**: Add streaming state management
+  ** Single-shot: `uint32_t xxh32(const void* input, size_t size, uint32_t seed)` — already exported
+  ** Streaming: `xxh32_reset()`, `xxh32_update()`, `xxh32_digest()` (with shared opaque state)
+  ** NOTE: No secret-based variants (not supported by vendor xxHash for xxh32)
+
+* **xxh64**: Add streaming state management (as above, but with 64-bit semantics)
+  ** Single-shot: `uint64_t xxh64(const void* input, size_t size, uint64_t seed)` — already exported
+  ** Streaming: `xxh64_reset()`, `xxh64_update()`, `xxh64_digest()` (with shared opaque state)
+  ** NOTE: No secret-based variants (not supported by vendor xxHash for xxh64)
+
+==== 22.3 Technical Details
+
+* All APIs reuse **unified hash state** type `xxh3_state_t` (opaque pointer), managed by `xxh3_createState()` / `xxh3_freeState()`
+* State is **algorithm-agnostic**: consumers call `xxh32_reset()` vs `xxh3_64_reset()` to lock the algorithm; once locked, the state is bound to that algorithm for the lifetime of the object
+* No internal dispatch in xxh32/xxh64 wrappers (as with XXH3)
+* Secret/randomization for xxh32/xxh64 is seed-based only; custom secret randomization is exclusive to XXH3 family
+
+==== 22.4 Rationale
+
+* **API Consistency**: Downstream users (cr-xxhash) can build a unified hashing interface with algorithm selection at the call site
+* **Code Reuse**: Streaming state management is already implemented for XXH3; extending to xxh32/xxh64 adds minimal overhead
+* **Vendor Alignment**: xxHash library supports streaming variants for all three algorithms (XXH3, XXH64, XXH32); wrapper exposes the full interface available from vendor
+* **Future-Proofing**: Enables more sophisticated use cases (incremental hashing, algorithm switching, etc.)
+* **Practical Limitations**: xxh32 and xxh64 do not support secret-based variants in the vendor library; secret randomization remains exclusive to XXH3
