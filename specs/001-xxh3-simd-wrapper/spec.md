@@ -109,6 +109,7 @@ Users and CI verify that the library produces correct hashing output across all 
 - **FR-021**: Library MUST export **streaming APIs for xxh32 and xxh64**: `void xxh32_reset(xxh3_state_t* state, uint32_t seed)`, `int xxh32_update(xxh3_state_t* state, const void* input, size_t size)`, `uint32_t xxh32_digest(xxh3_state_t* state)` (and equivalent `xxh64_reset`, `xxh64_update`, `xxh64_digest`). Streaming state is shared with XXH3 via the same `xxh3_state_t` type and `xxh3_createState()`/`xxh3_freeState()` lifecycle; once `xxh32_reset()` is called, the state is locked to the xxh32 algorithm for subsequent updates. Callers MUST NOT mix algorithm resets (e.g., calling `xxh32_reset()` followed by `xxh3_64_update()` on the same state), as this results in undefined behavior.
 - **FR-022**: Library does NOT export secret-based variants for xxh32 and xxh64; these functions support only seed-based seeding via the streaming reset APIs. Secret-based randomization (via `generateSecret()`) is available exclusively for the XXH3 family of functions.
 - **FR-023**: Library MUST export **state copy functions** for all streaming hash variants: `int xxh3_copyState(xxh3_state_t* dst, const xxh3_state_t* src)`. This function copies the complete internal state from source to destination, allowing multiple independent branches of hashing from a single checkpoint. The copy is a deep copy; modifying the destination state does not affect the source. All XXH3, xxh32, and xxh64 streaming variants share the same `xxh3_copyState()` function via the shared `xxh3_state_t` type.
+- **FR-024**: Library MUST export **unseeded variants** of all XXH3 single-shot and streaming reset functions: `uint64_t xxh3_64_unseeded(const void* input, size_t size)`, `xxh3_128_t xxh3_128_unseeded(const void* input, size_t size)`, plus architecture-specific unseeded variants for each SIMD implementation (e.g., `xxh3_64_sse2_unseeded()`, `xxh3_64_neon_unseeded()`, `xxh3_64_sve_unseeded()`, `xxh3_64_scalar_unseeded()`, and corresponding 128-bit variants). Unseeded variants are thin wrappers that delegate to the seeded variant with seed=0, maintaining internal code simplicity. Streaming unseeded variants MUST include `void xxh3_64_reset_unseeded(xxh3_state_t* state)` and `void xxh3_128_reset_unseeded(xxh3_state_t* state)`.
 - **FR-016**: Library MUST follow a **four-digit (Numeric Quad) versioning scheme**: `MAJOR.MINOR.PATCH.WRAPPER_PATCH`. The first three digits MUST match the version of the vendored xxHash library (e.g., `0.8.3`). The fourth digit is reserved for the wrapper project's own patches or ABI-compatible fixes (e.g., `0.8.3.0`, `0.8.3.1`).
 - **FR-017**: Library MUST use **GitLab Flow with Release Branches**. The default primary branch is `main`. Long-lived release branches MUST be created for specific vendor versions (e.g., `v0.8.3.x`).
 - **FR-018**: Library MUST adhere to **Inclusive Naming standards** ([inclusivenaming.org](https://inclusivenaming.org/)) for all wrapper-contributed code (`src/`, `include/`), documentation, and build scripts. Vendored source code (`vendor/`) is excluded from this requirement to ensure clean upstream updates.
@@ -180,3 +181,33 @@ Users and CI verify that the library produces correct hashing output across all 
 - **Symbols**: XXH3 functions use prefix `xxh3_*` / `XXH3_*` with SIMD variant suffix (`_scalar`, `_sse2`, `_avx2`, `_avx512`, `_neon`, `_sve`). Legacy/traditional functions use plain names `xxh32` and `xxh64` with no suffix. No namespace macro support.
 - **Error Handling**: Contract-based (preconditions documented); calling a SIMD variant on a CPU that does not support the required instruction set is undefined behavior. The library header documents required CPU features per variant.
 - **Threading**: No mutable shared state; library is reentrant and thread-safe for concurrent read-only hashing.
+
+## Intentionally Omitted Vendor Functions
+
+The wrapper provides comprehensive delegation to vendor xxHash. The following vendor functions are **available in xxHash but NOT exported** by the wrapper, with rationale:
+
+### XXH3 with Secret AND Seed (Combined)
+- `XXH3_64bits_withSecretandSeed()` / `XXH3_128bits_withSecretandSeed()`
+- **Rationale**: Rare use case. Consumers needing both can derive a secret from their seed via `xxh3_generateSecret()` and use `xxh3_64_withSecret()`. Omitting reduces API surface per the "simple wrapper" philosophy.
+
+### Additional Secret Generation
+- `XXH3_generateSecret_fromSeed()` 
+- **Rationale**: Wrapper exports the general-case `xxh3_generateSecret()` which accepts custom seed bytes. Direct seed-to-secret conversion can be replicated by consumers creating a seed buffer and calling the general form.
+
+### XXH128 Comparison Utilities
+- `XXH128_isEqual()` / `XXH128_cmp()`
+- **Rationale**: Consumers can compare 128-bit hash results via struct field comparison or standard `memcmp()`. These utilities are convenience functions; omitting them keeps the wrapper minimal.
+
+### Canonical Representation (32 & 64-bit)
+- `XXH32_canonicalFromHash()` / `XXH32_hashFromCanonical()`
+- `XXH64_canonicalFromHash()` / `XXH64_hashFromCanonical()`
+- **Rationale**: Canonical form is for serializing hashes to big-endian byte buffers for network/storage. Not required for all consumers. Library provides the core hashing; consumers needing serial form can add it themselves.
+
+## Extensibility
+
+Consumers needing any of the above functions can:
+1. Implement them locally by calling vendor functions or wrapper exports.
+2. Propose additions via issue/PR with use case justification.
+3. Bind directly to vendor xxHash library in parallel if needed.
+
+This design maintains the wrapper as a "simple delegation" layer while leaving room for consumer-driven extensions.

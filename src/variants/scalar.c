@@ -21,3 +21,14 @@ xxh3_128_t xxh3_128_scalar(const void* input, size_t size, uint64_t seed)
 {
     return xxh3_convert_128_scalar(XXH3_128bits_withSeed(input, size, seed));
 }
+
+/* Unseeded variants (default seed=0) */
+uint64_t xxh3_64_scalar_unseeded(const void* input, size_t size)
+{
+    return XXH3_64bits_withSeed(input, size, 0);
+}
+
+xxh3_128_t xxh3_128_scalar_unseeded(const void* input, size_t size)
+{
+    return xxh3_convert_128_scalar(XXH3_128bits_withSeed(input, size, 0));
+}

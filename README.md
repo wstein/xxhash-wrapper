@@ -50,9 +50,12 @@ The build no longer accepts a global `simd_backend` option. Each SIMD variant is
 
 ## Public API
 
-- XXH3 single-shot variants: `xxh3_64_<variant>()`, `xxh3_128_<variant>()`
-- Streaming API: `xxh3_createState()`, `xxh3_64_reset/update/digest()`, `xxh3_128_reset/update/digest()`
-- State copy: `xxh3_copyState()` — deep copy of streaming state for branching workflows (FR-023)
+- XXH3 single-shot variants: `xxh3_64_<variant>()`, `xxh3_128_<variant>()` — seeded (explicit seed parameter)
+- XXH3 unseeded single-shot variants: `xxh3_64_unseeded()`, `xxh3_128_unseeded()` — dispatches to platform's best variant with seed=0
+- XXH3 unseeded architecture-specific variants: `xxh3_64_<variant>_unseeded()`, `xxh3_128_<variant>_unseeded()` (sse2, avx2, avx512, neon, sve, scalar)
+- Streaming API: `xxh3_64_reset/update/digest()`, `xxh3_128_reset/update/digest()` — seeded
+- Streaming unseeded API: `xxh3_64_reset_unseeded()`, `xxh3_128_reset_unseeded()` — unseeded streaming reset
+- State management: `xxh3_createState()`, `xxh3_copyState()` — deep copy for branching workflows (FR-023)
 - Secret API: `xxh3_64_withSecret()`, `xxh3_128_withSecret()`, `XXH3_generateSecret()`
 - Legacy/traditional scalar exports: `xxh32()`, `xxh64()`
 
@@ -129,3 +132,14 @@ This library provides exported symbols per variant but does not do runtime CPU d
 ```sh
 ./build/bench_variants
 ```
+
+## What's NOT Exported
+
+This wrapper focuses on core XXH3 hashing and intentionally omits the following vendor functions, per the "simple wrapper" design philosophy:
+
+- **XXH3 with Secret AND Seed:** `XXH3_64bits_withSecretandSeed()`, `XXH3_128bits_withSecretandSeed()` — can be achieved by deriving a secret from seed and using `xxh3_64_withSecret()`
+- **Direct Seed-to-Secret:** `XXH3_generateSecret_fromSeed()` — use the general `xxh3_generateSecret()` instead
+- **XXH128 Comparison:** `XXH128_isEqual()`, `XXH128_cmp()` — use struct field comparison or `memcmp()` instead
+- **Canonical Representation:** `XXH32_canonicalFromHash()`, `XXH64_canonicalFromHash()`, etc. — implement in consumer code if needed
+
+Consumers needing any of these functions can implement them locally by calling the exported wrapper functions.

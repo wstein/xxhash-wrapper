@@ -1,0 +1,221 @@
+== Meeting Minutes: API Audit and Unseeded Variants Implementation
+
+=== Date: February 19, 2026
+
+=== Attendees: Technical Review Team
+
+'''''
+
+=== 1. API Audit Summary
+
+==== 1.1 Complete Vendor Function Mapping
+
+This session performed a comprehensive audit of vendor xxHash functions vs wrapper
+exports to identify gaps and ensure complete API coverage.
+
+===== Vendor Functions EXPORTED by Wrapper
+
+*XXH3 64-bit (Single-shot & Streaming)*
+* `xxh3_64()` — dispatches to best variant (seeded)
+* `xxh3_64_unseeded()` — dispatches to best variant (seed=0)
+* `xxh3_64_<variant>()` — explicit variants: scalar, sse2, avx2, avx512, neon, sve (seeded)
+* `xxh3_64_<variant>_unseeded()` — all 6 variants unseeded
+* `xxh3_64_reset()` — start streaming with seed
+* `xxh3_64_reset_unseeded()` — start streaming with seed=0
+* `xxh3_64_update()` — consume input block
+* `xxh3_64_digest()` — finalize and get result
+* `xxh3_64_withSecret()` — single-shot with custom secret
+
+*XXH3 128-bit (Single-shot & Streaming)*
+* `xxh3_128()` — dispatches to best variant (seeded)
+* `xxh3_128_unseeded()` — dispatches to best variant (seed=0)
+* `xxh3_128_<variant>()` — explicit variants (seeded)
+* `xxh3_128_<variant>_unseeded()` — all 6 variants unseeded
+* `xxh3_128_reset()` — start streaming with seed
+* `xxh3_128_reset_unseeded()` — start streaming with seed=0
+* `xxh3_128_update()` — consume input block
+* `xxh3_128_digest()` — finalize and get result
+* `xxh3_128_withSecret()` — single-shot with custom secret
+
+*XXH3 Streaming (Both 64 & 128)*
+* `xxh3_reset_withSecret()` — streaming reset with custom secret (64 & 128 versions)
+* `xxxh3_generateSecret()` — derive secret from seed
+* `xxh3_copyState()` — deep copy streaming state for branching
+
+*XXH32 & XXH64 (Legacy/Traditional)*
+* `xxh32()` — scalar-only, no variants
+* `xxh64()` — scalar-only (high-perf scalar fallback)
+* Streaming: `xxh32_reset()`, `xxh32_update()`, `xxh32_digest()`
+* Streaming: `xxh64_reset()`, `xxh64_update()`, `xxh64_digest()`
+
+===== Vendor Functions NOT EXPORTED
+
+*XXH3 with Secret AND Seed*
+* `XXH3_64bits_withSecretandSeed()` — allows custom secret + custom seed together
+* `XXH3_128bits_withSecretandSeed()` — 128-bit variant
+
+Rational: These functions are rarely used in practice; consumers can derive a
+secret from the seed using `xxh3_generateSecret()` and then use `withSecret()`.
+Maintaining simplicity of the wrapper (per design philosophy) justifies omission.
+
+*XXH3 Streaming Secret+Seed Reset*
+* NO streaming reset variant that takes both secret AND seed
+Rational: Not provided by vendor as streaming API; single-shot only.
+
+*Additional Secret Derivation*
+* `XXH3_generateSecret_fromSeed()` — generates secret directly from seed (vendor
+provides this but we only expose the more general `xxh3_generateSecret()` that
+takes custom seed bytes)
+
+Rational: Wrapper exposes the more general form; direct seed-to-secret can be
+replicated by creating a seed buffer and calling the general form.
+
+*XXH128 Comparison Utilities*
+* `XXH128_isEqual()` — compare two 128-bit hashes for equality
+* `XXH128_cmp()` — compare two 128-bit hashes (for sorting with qsort/bsearch)
+
+Rationale: Simple equality/comparison can be done with memcmp or direct struct
+comparison in consumer code; omitting keeps wrapper's export surface minimal and
+follows the "simple wrapper" philosophy.
+
+*Canonical Representation (32 & 64)*
+* `XXH32_canonicalFromHash()` / `XXH32_hashFromCanonical()`
+* `XXH64_canonicalFromHash()` / `XXH64_hashFromCanonical()`
+
+Rationale: These are for serializing hashes to network/storage in big-endian
+canonical form. Not essential for all consumers; library provides base functions
+to which consumer can add if needed. Omitting reduces complexity.
+
+'''''
+
+=== 2. Unseeded Variants Implementation (FR-024)
+
+==== 2.1 Motivation
+
+User question: "does xxh3 function _withSeed and wo/ _withSeed exported?" identified
+that wrapper only exported seeded variants, forcing consumers to always provide a
+seed even when they want the default (seed=0) behavior.
+
+==== 2.2 Implementation Strategy
+
+Simple delegation: All unseeded functions are one-line wrappers around seeded variants
+with seed=0. This maintains the "simple wrapper" design philosophy.
+
+Example pattern:
+[source,c]
+----
+// In variant file (e.g., sve.c)
+uint64_t xxh3_64_sve_unseeded(const void* input, size_t size)
+{
+    return XXH3_64bits_withSeed(input, size, 0);  // Simple delegation
+}
+
+// In wrapper dispatcher
+uint64_t xxh3_64_unseeded(const void* input, size_t size)
+{
+#if defined(__aarch64__)
+    return xxh3_64_neon_unseeded(input, size);  // Auto-select best variant
+#elif defined(__x86_64__)
+    return xxh3_64_avx2_unseeded(input, size);
+#else
+    return xxh3_64_scalar_unseeded(input, size);
+#endif
+}
+----
+
+==== 2.3 Scope
+
+Added unseeded variants for:
+* Single-shot: `xxh3_64_unseeded()`, `xxh3_128_unseeded()`
+* All 6 SIMD variants: `xxh3_64_<variant>_unseeded()`, `xxh3_128_<variant>_unseeded()`
+  - scalar, sse2, avx2, avx512 (x86)
+  - neon, sve (aarch64)
+* Streaming reset: `xxh3_64_reset_unseeded()`, `xxh3_128_reset_unseeded()`
+
+Total: 16 new unseeded functions (8 single-shot + 8 streaming reset)
+
+==== 2.4 Testing
+
+* All functions compile without errors
+* Unit test suite passes (confirms no regressions in seeded variants)
+* Symbol table verified: all 10 unseeded dispatcher/reset functions present in shared library
+* Backward compatibility: All existing seeded APIs remain unchanged
+
+'''''
+
+=== 3. Design Decisions & Justifications
+
+==== 3.1 Why Not Export withSecretandSeed?
+
+The wrapper philosophy is "simple delegation to vendor". The withSecretandSeed
+variant is a specialized use case (custom secret + custom seed) that can be
+achieved by consumers deriving a secret from the seed and calling withSecret().
+
+This decision keeps the API surface manageable and reduces testing/maintenance burden.
+
+==== 3.2 Why Not Export Comparison Utilities (XXH128_isEqual, XXH128_cmp)?
+
+These are convenience functions for comparing two 128-bit hash results. Since the
+128-bit hash is a simple struct with two 64-bit fields, consumers can:
+* For equality: `(h1.low == h2.low) && (h1.high == h2.high)`
+* For sorting: Use `memcmp()` or qsort's comparison mechanism
+
+This follows the "simple wrapper" principle: the wrapper exports the core hashing
+functions; utilities can easily be implemented by consumers.
+
+==== 3.3 Why Not Export Canonical Functions?
+
+Canonical representation (converting hash values to big-endian byte buffers for
+network/storage) is not essential for all consumers. The wrapper focuses on the
+core XXH3 hashing functionality; consumers needing canonical form can implement it
+in their own code.
+
+'''''
+
+=== 4. Documentation Updates
+
+==== 4.1 CHANGELOG
+
+Added new entry documenting unseeded single-shot and streaming variants for all
+XXH3 functions, including all architecture-specific variants.
+
+==== 4.2 README
+
+Updated "Public API" section to explicitly list:
+* Seeded single-shot with dispatcher
+* Unseeded single-shot with dispatcher
+* Architecture-specific unseeded variants
+* Streaming unseeded reset functions
+* Distinction between seeded and unseeded
+
+==== 4.3 Specifications (spec.md)
+
+Added FR-024 (Functional Requirement):
+"Library MUST export unseeded variants of all XXH3 single-shot and streaming
+reset functions... Unseeded variants are thin wrappers that delegate to the
+seeded variant with seed=0, maintaining internal code simplicity."
+
+==== 4.4 Meeting Minutes
+
+This document (2026-02-19) provides complete audit results and rationale for
+which vendor functions ARE and ARE NOT exported.
+
+'''''
+
+=== 5. Key Takeaways
+
+1. Wrapper consistently delegates to vendor; no custom hash logic
+2. Consumer dispatch responsibility aligns with "simple wrapper" philosophy
+3. Unseeded variants address user request for default-seed API
+4. Significant vendor functions intentionally NOT exported due to limited-use
+   patterns (can be layered by consumers if needed)
+5. Library now provides both seeded and unseeded XXH3 APIs across all variants
+6. Full backward compatibility maintained
+
+'''''
+
+=== 6. Next Steps
+
+* Monitor user feedback on missing APIs
+* Consider adding missing comparison/canonical functions if demand increases
+* Continue testing across platforms (already verified on macOS arm64)

@@ -41,6 +41,29 @@ xxh3_128_t xxh3_128(const void* input, size_t size, uint64_t seed)
 #endif
 }
 
+/* Unseeded dispatchers (seed=0 by default) */
+uint64_t xxh3_64_unseeded(const void* input, size_t size)
+{
+#if defined(__aarch64__) || defined(_M_ARM64)
+    return xxh3_64_neon_unseeded(input, size);
+#elif defined(__x86_64__) || defined(_M_X64)
+    return xxh3_64_avx2_unseeded(input, size);
+#else
+    return xxh3_64_scalar_unseeded(input, size);
+#endif
+}
+
+xxh3_128_t xxh3_128_unseeded(const void* input, size_t size)
+{
+#if defined(__aarch64__) || defined(_M_ARM64)
+    return xxh3_128_neon_unseeded(input, size);
+#elif defined(__x86_64__) || defined(_M_X64)
+    return xxh3_128_avx2_unseeded(input, size);
+#else
+    return xxh3_128_scalar_unseeded(input, size);
+#endif
+}
+
 xxh3_state_t* xxh3_createState(void)
 {
     xxh3_state_t* wrapper_state = (xxh3_state_t*)calloc(1, sizeof(*wrapper_state));
@@ -75,6 +98,15 @@ void xxh3_64_reset(xxh3_state_t* state, uint64_t seed)
     (void)XXH3_64bits_reset_withSeed(state->state, seed);
 }
 
+/* Unseeded streaming reset (seed=0 by default) */
+void xxh3_64_reset_unseeded(xxh3_state_t* state)
+{
+    if (state == NULL || state->state == NULL) {
+        return;
+    }
+    (void)XXH3_64bits_reset_withSeed(state->state, 0);
+}
+
 int xxh3_64_update(xxh3_state_t* state, const void* input, size_t size)
 {
     if (state == NULL || state->state == NULL) {
@@ -97,6 +129,15 @@ void xxh3_128_reset(xxh3_state_t* state, uint64_t seed)
         return;
     }
     (void)XXH3_128bits_reset_withSeed(state->state, seed);
+}
+
+/* Unseeded streaming reset (seed=0 by default) */
+void xxh3_128_reset_unseeded(xxh3_state_t* state)
+{
+    if (state == NULL || state->state == NULL) {
+        return;
+    }
+    (void)XXH3_128bits_reset_withSeed(state->state, 0);
 }
 
 int xxh3_128_update(xxh3_state_t* state, const void* input, size_t size)

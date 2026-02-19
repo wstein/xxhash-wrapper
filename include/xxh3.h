@@ -66,44 +66,62 @@ typedef struct xxh3_state_t xxh3_state_t;
 uint64_t xxh3_64(const void* input, size_t size, uint64_t seed);
 xxh3_128_t xxh3_128(const void* input, size_t size, uint64_t seed);
 
+/* Unseeded single-shot functions (default seed=0) */
+uint64_t xxh3_64_unseeded(const void* input, size_t size);
+xxh3_128_t xxh3_128_unseeded(const void* input, size_t size);
+
 uint64_t xxh3_64_scalar(const void* input, size_t size, uint64_t seed);
+uint64_t xxh3_64_scalar_unseeded(const void* input, size_t size);
 xxh3_128_t xxh3_128_scalar(const void* input, size_t size, uint64_t seed);
+xxh3_128_t xxh3_128_scalar_unseeded(const void* input, size_t size);
 
 /* x86-64 SIMD variants (always available on x86-64 builds) */
 #if XXH3_HAVE_SSE2
 uint64_t xxh3_64_sse2(const void* input, size_t size, uint64_t seed);
+uint64_t xxh3_64_sse2_unseeded(const void* input, size_t size);
 xxh3_128_t xxh3_128_sse2(const void* input, size_t size, uint64_t seed);
+xxh3_128_t xxh3_128_sse2_unseeded(const void* input, size_t size);
 #endif
 
 #if XXH3_HAVE_AVX2
 uint64_t xxh3_64_avx2(const void* input, size_t size, uint64_t seed);
+uint64_t xxh3_64_avx2_unseeded(const void* input, size_t size);
 xxh3_128_t xxh3_128_avx2(const void* input, size_t size, uint64_t seed);
+xxh3_128_t xxh3_128_avx2_unseeded(const void* input, size_t size);
 #endif
 
 #if XXH3_HAVE_AVX512
 uint64_t xxh3_64_avx512(const void* input, size_t size, uint64_t seed);
+uint64_t xxh3_64_avx512_unseeded(const void* input, size_t size);
 xxh3_128_t xxh3_128_avx512(const void* input, size_t size, uint64_t seed);
+xxh3_128_t xxh3_128_avx512_unseeded(const void* input, size_t size);
 #endif
 
 /* aarch64 SIMD variants (only available on aarch64 builds) */
 #if XXH3_HAVE_NEON
 uint64_t xxh3_64_neon(const void* input, size_t size, uint64_t seed);
+uint64_t xxh3_64_neon_unseeded(const void* input, size_t size);
 xxh3_128_t xxh3_128_neon(const void* input, size_t size, uint64_t seed);
+xxh3_128_t xxh3_128_neon_unseeded(const void* input, size_t size);
 #endif
 
 #if XXH3_HAVE_SVE
 uint64_t xxh3_64_sve(const void* input, size_t size, uint64_t seed);
+uint64_t xxh3_64_sve_unseeded(const void* input, size_t size);
 xxh3_128_t xxh3_128_sve(const void* input, size_t size, uint64_t seed);
+xxh3_128_t xxh3_128_sve_unseeded(const void* input, size_t size);
 #endif
 
 xxh3_state_t* xxh3_createState(void);
 void xxh3_freeState(xxh3_state_t* state);
 
 void xxh3_64_reset(xxh3_state_t* state, uint64_t seed);
+void xxh3_64_reset_unseeded(xxh3_state_t* state);
 int xxh3_64_update(xxh3_state_t* state, const void* input, size_t size);
 uint64_t xxh3_64_digest(xxh3_state_t* state);
 
 void xxh3_128_reset(xxh3_state_t* state, uint64_t seed);
+void xxh3_128_reset_unseeded(xxh3_state_t* state);
 int xxh3_128_update(xxh3_state_t* state, const void* input, size_t size);
 xxh3_128_t xxh3_128_digest(xxh3_state_t* state);
 

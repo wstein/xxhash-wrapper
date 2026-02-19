@@ -3,9 +3,10 @@
  *
  * Comprehensive Unity test suite for the xxhash-wrapper library.
  * Covers:
- *   - Version macros
- *   - XXH3-64 and XXH3-128: single-shot all variants vs scalar reference
- *   - XXH3 streaming: reset/update/digest matches single-shot
+ *   - Version macros and API availability
+ *   - XXH3-64 and XXH3-128: seeded single-shot all variants vs scalar reference
+ *   - XXH3-64 and XXH3-128: unseeded single-shot all variants (FR-024)
+ *   - XXH3 streaming: reset/update/digest matches single-shot (seeded & unseeded)
  *   - XXH3 incremental chunked streaming
  *   - XXH3 secret-based hashing (single-shot + streaming)
  *   - xxh32 single-shot stability and seed sensitivity
@@ -13,11 +14,19 @@
  *   - xxh64 single-shot stability and seed sensitivity
  *   - xxh64 streaming and chunked streaming matches single-shot
  *   - Edge cases: empty input, single byte, large deterministic inputs
- *   - Seed sensitivity: different seeds produce different hashes
+ *   - Seed sensitivity: seeded variants produce different outputs
+ *   - Unseeded consistency: unseeded variants always produce same output (seed=0)
  *   - State isolation: two concurrent states do not interfere
  *   - State reuse: reset + rehash produces identical output
  *   - Cross-algorithm independence: xxh32/xxh64/xxh3 outputs differ
  *   - Null/zero-state defensive return checks
+ *
+ * NOTE: Functions NOT exported (intentionally absent):
+ *   - XXH3_64bits_withSecretandSeed() / XXH3_128bits_withSecretandSeed()
+ *   - XXH3_generateSecret_fromSeed()
+ *   - XXH128_isEqual() / XXH128_cmp()
+ *   - Canonical representation (XXH32/64_canonicalFromHash, etc.)
+ *   See README.md and spec.md "Intentionally Omitted" for rationale.
  * =============================================================================
  */
 
@@ -249,6 +258,46 @@ static void test_xxh3_128_high_and_low_independently_nonzero(void)
     TEST_ASSERT_TRUE(h.high != 0 || h.low != 0);
 }
 
+/* ----------------------------------------- unseeded single-shot variants (FR-024) */
+
+static void test_xxh3_64_unseeded_matches_seed_zero(void)
+{
+    const size_t   size           = strlen(LOREM);
+    const uint64_t with_seed_zero = xxh3_64_scalar(LOREM, size, 0);
+    const uint64_t unseeded       = xxh3_64_unseeded(LOREM, size);
+
+    TEST_ASSERT_EQUAL_UINT64(with_seed_zero, unseeded);
+}
+
+static void test_xxh3_64_unseeded_scalar_variant(void)
+{
+    const size_t   size           = strlen(LOREM);
+    const uint64_t with_seed_zero = xxh3_64_scalar(LOREM, size, 0);
+    const uint64_t unseeded       = xxh3_64_scalar_unseeded(LOREM, size);
+
+    TEST_ASSERT_EQUAL_UINT64(with_seed_zero, unseeded);
+}
+
+static void test_xxh3_128_unseeded_matches_seed_zero(void)
+{
+    const size_t     size           = strlen(LOREM);
+    const xxh3_128_t with_seed_zero = xxh3_128_scalar(LOREM, size, 0);
+    const xxh3_128_t unseeded       = xxh3_128_unseeded(LOREM, size);
+
+    TEST_ASSERT_EQUAL_UINT64(with_seed_zero.high, unseeded.high);
+    TEST_ASSERT_EQUAL_UINT64(with_seed_zero.low,  unseeded.low);
+}
+
+static void test_xxh3_128_unseeded_scalar_variant(void)
+{
+    const size_t     size           = strlen(LOREM);
+    const xxh3_128_t with_seed_zero = xxh3_128_scalar(LOREM, size, 0);
+    const xxh3_128_t unseeded       = xxh3_128_scalar_unseeded(LOREM, size);
+
+    TEST_ASSERT_EQUAL_UINT64(with_seed_zero.high, unseeded.high);
+    TEST_ASSERT_EQUAL_UINT64(with_seed_zero.low,  unseeded.low);
+}
+
 /* ------------------------------------------------ xxh3 streaming vs single-shot */
 
 static void test_xxh3_64_stream_matches_single_shot(void)
@@ -277,6 +326,37 @@ static void test_xxh3_128_stream_matches_single_shot(void)
     got = xxh3_128_digest(state);
     TEST_ASSERT_EQUAL_UINT64(ref.high, got.high);
     TEST_ASSERT_EQUAL_UINT64(ref.low,  got.low);
+    xxh3_freeState(state);
+}
+
+static void test_xxh3_64_unseeded_stream_matches_seed_zero(void)
+{
+    const size_t   size           = strlen(LOREM);
+    const uint64_t with_seed_zero = xxh3_64_scalar(LOREM, size, 0);
+    xxh3_state_t*  state          = xxh3_createState();
+    uint64_t       unseeded_result;
+
+    TEST_ASSERT_NOT_NULL(state);
+    xxh3_64_reset_unseeded(state);
+    TEST_ASSERT_EQUAL_INT(XXH3_OK, xxh3_64_update(state, LOREM, size));
+    unseeded_result = xxh3_64_digest(state);
+    TEST_ASSERT_EQUAL_UINT64(with_seed_zero, unseeded_result);
+    xxh3_freeState(state);
+}
+
+static void test_xxh3_128_unseeded_stream_matches_seed_zero(void)
+{
+    const size_t     size           = strlen(LOREM);
+    const xxh3_128_t with_seed_zero = xxh3_128_scalar(LOREM, size, 0);
+    xxh3_state_t*    state          = xxh3_createState();
+    xxh3_128_t       unseeded_result;
+
+    TEST_ASSERT_NOT_NULL(state);
+    xxh3_128_reset_unseeded(state);
+    TEST_ASSERT_EQUAL_INT(XXH3_OK, xxh3_128_update(state, LOREM, size));
+    unseeded_result = xxh3_128_digest(state);
+    TEST_ASSERT_EQUAL_UINT64(with_seed_zero.high, unseeded_result.high);
+    TEST_ASSERT_EQUAL_UINT64(with_seed_zero.low,  unseeded_result.low);
     xxh3_freeState(state);
 }
 
@@ -771,9 +851,17 @@ int main(void)
     RUN_TEST(test_xxh3_128_variants_match_scalar_short);
     RUN_TEST(test_xxh3_128_high_and_low_independently_nonzero);
 
+    /* unseeded variants (FR-024) */
+    RUN_TEST(test_xxh3_64_unseeded_matches_seed_zero);
+    RUN_TEST(test_xxh3_64_unseeded_scalar_variant);
+    RUN_TEST(test_xxh3_128_unseeded_matches_seed_zero);
+    RUN_TEST(test_xxh3_128_unseeded_scalar_variant);
+
     /* xxh3 streaming */
     RUN_TEST(test_xxh3_64_stream_matches_single_shot);
     RUN_TEST(test_xxh3_128_stream_matches_single_shot);
+    RUN_TEST(test_xxh3_64_unseeded_stream_matches_seed_zero);
+    RUN_TEST(test_xxh3_128_unseeded_stream_matches_seed_zero);
     RUN_TEST(test_xxh3_64_chunked_streaming_matches_single_shot);
     RUN_TEST(test_xxh3_128_chunked_streaming_matches_single_shot);
 
