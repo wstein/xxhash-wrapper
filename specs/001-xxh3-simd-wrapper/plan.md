@@ -44,11 +44,15 @@
 
 ## Implementation Strategy
 
+The implementation is tracked across **19 Functional Requirements (FRs)** and **28 Tasks**, organized into 6 phases.
+
 ### 1. Project Initialization & Build System (Phase 1)
 - Set up Meson build structure.
 - Define library targets (static and shared).
 - Configure compiler flags for different SIMD variants (`-msse2`, `-mavx2`, `-mavx512f`, etc.).
 - Ensure `vendor/xxHash` is correctly linked/included.
+- **GitLab Flow Setup**: Initialize the repository with GitLab Flow branching rules (FR-017).
+- **Repository Rules**: Enforce Conventional Commits (FR-019) from the first commit.
 
 ### 2. Public API Definition (Phase 1)
 - Create `include/xxh3.h` with all required function signatures (`xxh3_64_scalar`, `xxh3_64_sse2`, etc.).
@@ -57,31 +61,36 @@
 
 ### 3. SIMD Variant Implementation (Phase 2 & 3)
 - Use a "trampoline" or separate compilation unit approach to ensure SIMD instructions are only emitted where intended.
+- **Combined Single-shot + No internal dispatch**: Implement FR-001 where each variant is exported as a distinct symbol, leaving dispatch to the consumer.
 - **x86/x64**: Implement SSE2, AVX2, and AVX512 wrappers. These must always be compiled into the binary.
 - **ARM aarch64**: Implement NEON and SVE wrappers. These are conditionally compiled based on the target architecture.
 - **Scalar**: Implement the baseline scalar fallback.
-- **Legacy/Traditional**: Export `xxh32` and `xxh64` directly from the vendored source.
+- **Legacy/Traditional**: Export `xxh32` (legacy) and `xxh64` (traditional) directly from the vendored source (FR-015).
 
 ### 4. Streaming API Implementation (Phase 3)
 - Implement `xxh3_createState()`, `xxh3_freeState()`, `reset()`, `update()`, and `digest()`.
 - Ensure the state correctly tracks the selected variant logic (though the user selects the variant at `reset()` time).
 
 ### 5. Correctness & Validation (Phase 4)
-- Unit tests to compare outputs of all variants against scalar reference.
+- Unit tests to compare outputs of all 19 FR-defined variants against scalar reference.
 - Property-based/fuzz tests to ensure stability across large/empty inputs.
 - Benchmark suite to verify performance gains (SC-004).
 
-### 6. Polish & Documentation (Phase 5)
+### 6. Polish & Documentation (Phase 5 & 6)
 - Finalize `xxh3.h` documentation and usage examples.
-- Ensure compliance with Inclusive Naming and Conventional Commits.
+- Ensure compliance with Inclusive Naming (FR-018) and Conventional Commits.
 - Verify reproducible builds.
+- **Integration Verification**: Verify the `cr-xxhash` Crystal shard integration (SC-007).
 
 ## Key Decisions
 
-- **No Internal Dispatch**: We will export individual symbols. This simplifies the library significantly and gives full control to the consumer (e.g., Crystal's shard).
+- **No Internal Dispatch**: We will export individual symbols as defined in **FR-001**. This simplifies the library significantly and gives full control to the consumer (e.g., Crystal's shard).
 - **Separate Compilation Units**: To avoid CPU feature leakage, each SIMD variant will be compiled in its own file with specific compiler flags.
-- **C99 Compliance**: Strictly enforce `-std=c99` for all non-vendored code.
-- **Versioning**: Follow `MAJOR.MINOR.PATCH.WRAPPER_PATCH` (e.g., `0.8.3.0`).
+- **C99 Compliance (FR-014)**: Strictly enforce `-std=c99` for all non-vendored code in `src/` and `include/`. No C11 or compiler-specific extensions are permitted.
+- **Versioning (FR-016)**: Follow `MAJOR.MINOR.PATCH.WRAPPER_PATCH` (e.g., `0.8.3.0`).
+- **GitLab Flow (FR-017)**: Primary branch `main` with release branches for specific xxHash versions.
+- **Inclusive Naming (FR-018)**: Apply in `src/`, `include/`, docs, and build scripts.
+- **Legacy/Traditional Support (FR-015)**: Export `xxh32` and `xxh64` with no suffix for backwards compatibility and fallback usage.
 
 ## Dependencies
 
