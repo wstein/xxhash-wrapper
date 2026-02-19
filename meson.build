@@ -16,6 +16,10 @@ inc = include_directories(
   'vendor/xxHash',
 )
 
+test_inc = include_directories(
+  'tests/unity',
+)
+
 wrapper_sources = files(
   'src/xxh3_wrapper.c',
   'src/variants/x86/sse2.c',
@@ -50,8 +54,12 @@ install_headers('include/xxh3.h')
 test_exe = executable(
   'test_variants',
   'tests/unit/test_variants.c',
-  include_directories: inc,
+  'tests/unity/unity.c',
+  include_directories: [inc, test_inc],
   dependencies: [xxh3_dep],
+)
+add_test_setup('unity',
+  env: ['UNITY_CONFIG=unity.config'],
 )
 test('unit-variants', test_exe)
 

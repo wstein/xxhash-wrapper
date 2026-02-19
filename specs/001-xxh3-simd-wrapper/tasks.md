@@ -71,9 +71,9 @@
 - [x] T018 [P] [US3] Implement fuzz testing harness in `tests/fuzz/fuzz_xxh3.c` using libFuzzer
 - [x] T019 [US3] Add automated ABI/regression checks script in `scripts/check-abi.sh`
 - [x] T020 [US3] Integrate microbenchmark harness in `tests/bench/bench_variants.c` to verify SC-004
-- [ ] T029 [P] [US3] Add Unity test framework integration in `meson.build` with `meson.add_test_setup()`
-- [ ] T030 [P] [US3] Migrate `tests/unit/test_variants.c` to use Unity test macros for better assertions
-- [ ] T031 [US3] Add Unity test configuration file `unity.config` for test grouping and reporting
+- [x] T029 [P] [US3] Add Unity test framework integration in `meson.build` with `meson.add_test_setup()`
+- [x] T030 [P] [US3] Migrate `tests/unit/test_variants.c` to use Unity test macros for better assertions
+- [x] T031 [US3] Add Unity test configuration file `unity.config` for test grouping and reporting
 
 ---
 
@@ -94,7 +94,7 @@
 
 **Purpose**: Final quality checks, documentation, and compliance.
 
-- [ ] T023 Finalize Inclusive Naming across all files in `src/` and `include/`
+- [x] T023 Finalize Inclusive Naming across all files in `src/` and `include/`
 - [ ] T024 [P] Verify reproducible build checksums across Linux and macOS environments
 - [x] T025 Update `README.md` with usage examples and FFI integration guide
 - [x] T026 [P] Ensure all commits follow Conventional Commits specification

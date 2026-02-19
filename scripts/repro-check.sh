@@ -1,19 +1,14 @@
 #!/usr/bin/env sh
 set -eu
 
-meson setup build-repro-a --wipe
+meson setup build-repro-a --wipe --buildtype=release
 meson compile -C build-repro-a
 
-meson setup build-repro-b --wipe
+meson setup build-repro-b --wipe --buildtype=release
 meson compile -C build-repro-b
 
-LIB_A="build-repro-a/libxxh3_wrapper.so"
-LIB_B="build-repro-b/libxxh3_wrapper.so"
-
-if [ -f "build-repro-a/libxxh3_wrapper.dylib" ]; then
-  LIB_A="build-repro-a/libxxh3_wrapper.dylib"
-  LIB_B="build-repro-b/libxxh3_wrapper.dylib"
-fi
+LIB_A="build-repro-a/libxxh3_wrapper_static.a"
+LIB_B="build-repro-b/libxxh3_wrapper_static.a"
 
 if command -v shasum >/dev/null 2>&1; then
   SH_A=$(shasum -a 256 "$LIB_A" | awk '{print $1}')
