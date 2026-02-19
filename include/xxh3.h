@@ -59,8 +59,18 @@ void xxh3_generateSecret(void* secretBuffer, size_t secretSize, uint64_t seed);
 #define XXH3_generateSecret(secretBuffer, secretSize, seed) \
     xxh3_generateSecret((secretBuffer), (secretSize), (seed))
 
+/* XXH32 and XXH64: scalar-only single-shot functions (no SIMD variants) */
 uint32_t xxh32(const void* input, size_t size, uint32_t seed);
 uint64_t xxh64(const void* input, size_t size, uint64_t seed);
+
+/* XXH32 and XXH64: streaming APIs (using shared xxh3_state_t) */
+void xxh32_reset(xxh3_state_t* state, uint32_t seed);
+int xxh32_update(xxh3_state_t* state, const void* input, size_t size);
+uint32_t xxh32_digest(xxh3_state_t* state);
+
+void xxh64_reset(xxh3_state_t* state, uint64_t seed);
+int xxh64_update(xxh3_state_t* state, const void* input, size_t size);
+uint64_t xxh64_digest(xxh3_state_t* state);
 
 /*
  * CPU requirements for variant functions (consumer dispatch responsibility):
@@ -69,6 +79,12 @@ uint64_t xxh64(const void* input, size_t size, uint64_t seed);
  * - xxh3_*_avx512: x86/x64 with AVX512F (and OS XSAVE enabled)
  * - xxh3_*_neon: aarch64 with NEON
  * - xxh3_*_sve: aarch64 with SVE
+ *
+ * NOTE: xxh32 and xxh64 have no SIMD variants and can be called unconditionally.
+ * Streaming state is shared with XXH3 via xxh3_state_t; lock algorithm at reset time.
+ *
+ * NOTE: xxh32 and xxh64 do not support secret-based variants;
+ * secret randomization is available only for XXH3 family functions.
  */
 
 #ifdef __cplusplus

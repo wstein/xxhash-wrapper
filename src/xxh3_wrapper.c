@@ -160,12 +160,68 @@ void xxh3_generateSecret(void* secretBuffer, size_t secretSize, uint64_t seed)
     }
 }
 
+/* ============================================
+   XXH32: Legacy 32-bit hash
+   ============================================ */
+
 uint32_t xxh32(const void* input, size_t size, uint32_t seed)
 {
     return XXH32(input, size, seed);
 }
 
+void xxh32_reset(xxh3_state_t* state, uint32_t seed)
+{
+    if (state == NULL || state->state == NULL) {
+        return;
+    }
+    (void)XXH32_reset((XXH32_state_t*)state->state, seed);
+}
+
+int xxh32_update(xxh3_state_t* state, const void* input, size_t size)
+{
+    if (state == NULL || state->state == NULL) {
+        return XXH3_ERROR;
+    }
+    return (int)XXH32_update((XXH32_state_t*)state->state, input, size);
+}
+
+uint32_t xxh32_digest(xxh3_state_t* state)
+{
+    if (state == NULL || state->state == NULL) {
+        return 0;
+    }
+    return XXH32_digest((XXH32_state_t*)state->state);
+}
+
+/* ============================================
+   XXH64: Traditional 64-bit hash
+   ============================================ */
+
 uint64_t xxh64(const void* input, size_t size, uint64_t seed)
 {
     return XXH64(input, size, seed);
+}
+
+void xxh64_reset(xxh3_state_t* state, uint64_t seed)
+{
+    if (state == NULL || state->state == NULL) {
+        return;
+    }
+    (void)XXH64_reset((XXH64_state_t*)state->state, seed);
+}
+
+int xxh64_update(xxh3_state_t* state, const void* input, size_t size)
+{
+    if (state == NULL || state->state == NULL) {
+        return XXH3_ERROR;
+    }
+    return (int)XXH64_update((XXH64_state_t*)state->state, input, size);
+}
+
+uint64_t xxh64_digest(xxh3_state_t* state)
+{
+    if (state == NULL || state->state == NULL) {
+        return 0;
+    }
+    return XXH64_digest((XXH64_state_t*)state->state);
 }
