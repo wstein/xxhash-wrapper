@@ -14,8 +14,8 @@
 | **Streaming API** | Single-shot only | Both (+streaming) | Enable efficient streaming hash use cases |
 | **Platforms** | General (all x86) | x86/x64 + ARM | Explicit scope definition for MVP |
 | **CPU Dispatch Strategy** | Vendor runtime dispatch | No internal dispatch; export all named variants | Simplicity; consumer controls selection |
-| **xxh32 / xxh64 exports** | Not in original scope | Added (FR-016) | Legacy/traditional scalar-only exports |
-| **C99 standard** | Mentioned in meeting notes | Now explicit in FR-015 | Codified in spec |
+| **xxh32 / xxh64 exports** | Not in original scope | Added (FR-015) | Legacy/traditional scalar-only exports |
+| **C99 standard** | Mentioned in meeting notes | Now explicit in FR-014 | Codified in spec |
 | **Secrets API** | Seed-only | Both seed + secrets | Full compatibility with vendor API |
 | **SIMD Targets** | SSE2, AVX2 | SSE2, AVX2, AVX512 | Performance consistency across HW |
 | **Build System** | CMake/Make | Meson | Project-specific requirement |
@@ -38,21 +38,22 @@
 
 ## Requirement Completeness
 
-- [x] Single-shot **and** streaming APIs defined (FR-001, FR-002)
+- [x] Single-shot **and** streaming APIs defined; no internal dispatch (FR-001, FR-002)
 - [x] Secret-based variants included (FR-003, FR-004)
-- [x] x86/x64 variants always exported (scalar, SSE2, AVX2, AVX512) — no internal dispatch (FR-005)
-- [x] ARM aarch64 variants exported when compiled for aarch64 (NEON, SVE) (FR-006)
-- [x] Scalar fallback required (FR-007)
-- [x] Identical output guarantee across SIMD variants (FR-008)
-- [x] Input size flexibility (FR-009)
-- [x] Static + shared library distribution (FR-010)
-- [x] Documentation and API reference (FR-011)
-- [x] Meson build system (FR-012)
-- [x] CPU feature override for testing (FR-013)
-- [x] Both dynamic + static linking (FR-014)
-- [x] C99 language standard for wrapper code (FR-015)
-- [x] xxh32 (legacy, 32-bit, scalar-only) and xxh64 (traditional, 64-bit, scalar-only) exported (FR-016)
-- [x] Numeric Quad versioning scheme (e.g., MAJOR.MINOR.PATCH.WRAPPER_PATCH) followed (FR-017)
+- [x] x86/x64 variants (SSE2, AVX2, AVX512) and ARM aarch64 (NEON, SVE) exported (FR-005)
+- [x] Scalar fallback required on all platforms (FR-006)
+- [x] Identical output guarantee across SIMD variants (FR-007)
+- [x] Input size flexibility up to `SIZE_MAX` (FR-008)
+- [x] C-compatible library for FFI and distribution (FR-009, FR-013)
+- [x] Public header and API documentation (FR-010)
+- [x] Meson build system (FR-011)
+- [x] CPU feature override for testing (FR-012)
+- [x] C99 language standard for wrapper code (FR-014)
+- [x] xxh32 (legacy) and xxh64 (traditional) scalar-only exports (FR-015)
+- [x] Numeric Quad versioning scheme (FR-016)
+- [x] GitLab Flow with Release Branches (FR-017)
+- [x] Inclusive Naming standards (FR-018)
+- [x] Conventional Commits specification (FR-019)
 
 ## Feature Readiness
 
@@ -69,13 +70,16 @@
 
 **Key improvements post-clarification**:
 - Streaming API clarified (both single-shot and state-based, per-variant)
-- **No internal dispatch**: all SIMD variants exported as named symbols; consumer selects variant
-- Platforms explicitly scoped (x86/x64 all variants always exported; ARM exports when target supports)
-- Build system fixed (Meson, not CMake/Makefile)
-- Secrets API exposed (seed + custom secret variants)
-- AVX512 included in MVP (performance consistency)
-- **C99** language standard explicit in FR-015
-- **xxh32** (legacy, 32-bit scalar) and **xxh64** (traditional, 64-bit scalar) exported as flat functions; `xxh64()` recommended as scalar fallback when no SIMD
+- **No internal dispatch**: all SIMD variants exported as named symbols; consumer selects variant (FR-001)
+- x86/x64 and ARM aarch64 SIMD coverage (FR-005)
+- Build system fixed (Meson, not CMake/Makefile, FR-011)
+- Secrets API exposed (seed + custom secret variants, FR-003)
+- AVX512 included in MVP (performance consistency, FR-005)
+- **C99** language standard explicit (FR-014)
+- **xxh32** (legacy) and **xxh64** (traditional) scalar-only exports (FR-015)
+- **Versioning**: Numeric Quad `MAJOR.MINOR.PATCH.WRAPPER_PATCH` (FR-016)
+- **Process**: GitLab Flow (FR-017) and Conventional Commits (FR-019)
+- **Inclusion**: Inclusive Naming standards applied to wrapper (FR-018)
 
 **Ready for next phase**: Run `/speckit.plan` to generate implementation plan and research phase.
 

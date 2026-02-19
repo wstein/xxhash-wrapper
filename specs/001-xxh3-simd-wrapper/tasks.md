@@ -22,6 +22,7 @@
 - [ ] T003 [P] Create public header `include/xxh3.h` with basic types and versioning (C99)
 - [ ] T004 Create `src/common/internal_utils.h` for shared macros and SIMD helpers
 - [ ] T005 Implement `MAJOR.MINOR.PATCH.WRAPPER_PATCH` versioning logic in `meson.build`
+- [ ] T028 Set up GitLab Flow branching and protection rules (FR-018) in repository configuration
 
 ---
 
@@ -34,7 +35,7 @@
 - [ ] T006 Create `src/xxh3_wrapper.c` and implement scalar fallback functions (`xxh3_64_scalar`, `xxh3_128_scalar`)
 - [ ] T007 [P] Implement legacy `xxh32` and traditional `xxh64` exports in `src/xxh3_wrapper.c`
 - [ ] T008 Define opaque `xxh3_state_t` in `include/xxh3.h` and implement `xxh3_createState`/`xxh3_freeState` in `src/xxh3_wrapper.c`
-- [ ] T009 Configure CI job matrix for SIMD/platform tests (x86_64, aarch64, macOS) in `.gitlab-ci.yml`
+- [ ] T009 Configure CI job matrix for SIMD/platform tests (x86_64, aarch64, macOS) and enforce C99 compliance via `-std=c99` in `.gitlab-ci.yml`
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -53,7 +54,7 @@
 - [ ] T012 [P] [US1] Implement AVX512 variant wrapper in `src/variants/x86/avx512.c`
 - [ ] T013 [P] [US1] Implement NEON variant wrapper in `src/variants/arm/neon.c`
 - [ ] T014 [P] [US1] Implement SVE variant wrapper in `src/variants/arm/sve.c`
-- [ ] T015 [US1] Implement streaming `reset`, `update`, and `digest` for all variants in `src/xxh3_wrapper.c`
+- [ ] T015 [US1] Implement 64-bit and 128-bit streaming `reset`, `update`, and `digest` for all variants in `src/xxh3_wrapper.c`
 - [ ] T016 [US1] Implement secret-based variants (`xxh3_*_withSecret`) and `XXH3_generateSecret` in `src/xxh3_wrapper.c`
 
 ---
@@ -94,6 +95,7 @@
 - [ ] T024 [P] Verify reproducible build checksums across Linux and macOS environments
 - [ ] T025 Update `README.md` with usage examples and FFI integration guide
 - [ ] T026 [P] Ensure all commits follow Conventional Commits specification
+- [ ] T027 Verify integration with cr-xxhash shard (SC-007)
 
 ## Implementation Strategy
 
