@@ -40,7 +40,8 @@ xxHash version.
 - Secret-based API for XXH3: `xxh3_64_withSecret`, `xxh3_128_withSecret`,
   `xxh3_64_reset_withSecret`, `xxh3_128_reset_withSecret`, `xxh3_generateSecret`
 - Legacy exports: `xxh32` (32-bit scalar, single-shot) and `xxh64` (64-bit scalar, single-shot)
-- `XXH3_FORCE_SCALAR=1` environment variable override for testing/debugging
+- Platform-specific SIMD variants compiled into separate translation units for optimal performance
+- `bench_variants` utility for local performance testing
 - Meson build system with shared + static library outputs (`-Ddefault_library=both`)
 - Unity test framework integration (`tests/unity/`, `unity.config`)
 - ABI regression check script (`scripts/check-abi.sh`)

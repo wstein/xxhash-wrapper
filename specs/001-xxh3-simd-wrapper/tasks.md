@@ -85,7 +85,7 @@
 
 ### Implementation for User Story 2
 
-- [x] T021 [US2] Implement CPU feature override for testing (`XXH3_FORCE_SCALAR=1`) in `src/xxh3_wrapper.c`
+- [x] T021 [US2] ~~Implement CPU feature override for testing (`XXH3_FORCE_SCALAR=1`)~~ **(Replaced)** — Removed in favor of unconditional SIMD export with consumer-side dispatch. All variants are now always exported as named public symbols; CPU feature detection is the consumer's responsibility.
 - [x] T022 [US2] Document required CPU features per variant in `include/xxh3.h` for consumer dispatch guidance
 
 ---
@@ -161,7 +161,7 @@
 
 #### Phase 5: User Story 2 - Maintenance (T021-T022) - ✅ Complete
 
-- CPU feature override mechanism (XXH3_FORCE_SCALAR)
+- ~~CPU feature override mechanism (XXH3_FORCE_SCALAR)~~ **(Removed)** — Replaced with unconditional SIMD variant export on each architecture; consumer performs CPU detection and variant selection.
 - CPU feature documentation in header
 
 #### Phase 6: Polish & Cross-Cutting (T023-T032) - ✅ Complete

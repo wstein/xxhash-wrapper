@@ -1,5 +1,7 @@
 #include "xxh3.h"
 
+#define XXH_VECTOR XXH_NEON
+#define XXH_INLINE_ALL
 #include "xxhash.h"
 
 static xxh3_128_t xxh3_convert_128_neon(XXH128_hash_t value)

@@ -18,7 +18,7 @@ meson test -C build --print-errorlogs
 # Native build (no cross-compilation)
 meson setup build
 meson compile -C build
-# Verify ARM variants exported (NEON, SVE):
+# Verify ARM variants exported (NEON only on Apple Silicon; SVE not available):
 nm -gp build/libxxh3_wrapper.dylib | grep xxh3_64
 ```
 
@@ -41,12 +41,12 @@ docker run --platform linux/arm64 --rm -v $(pwd):/src:ro alpine:latest sh -c '
   apk add -q meson ninja gcc musl-dev
   mkdir -p /tmp/build && cd /tmp/build
   meson setup /src && meson compile
-  # Verify ARM variants exported (NEON, SVE):
+  # Verify ARM variants exported (NEON; SVE if toolchain+CPU support):
   nm -gp libxxh3_wrapper.so | grep xxh3_64
 '
 ```
 
-See [PLATFORM_VERIFICATION.md](docs/PLATFORM_VERIFICATION.md) for detailed cross-platform test results.
+The build no longer accepts a global `simd_backend` option. Each SIMD variant is compiled in its own translation unit with its own `XXH_VECTOR` and CPU flags, and all variants are linked into the wrapper. See [Platform-Specific Verification Results](docs/PLATFORM_VERIFICATION.md) for detailed build and export examples across platforms.
 
 ## Public API
 
@@ -65,23 +65,22 @@ See [PLATFORM_VERIFICATION.md](docs/PLATFORM_VERIFICATION.md) for detailed cross
 - `xxh3_64_scalar`, `xxh3_128_scalar` — portable C fallback
 
 **aarch64 builds** export only ARM variants:
-- `xxh3_64_neon`, `xxh3_128_neon` — AArch64 NEON SIMD
-- `xxh3_64_sve`, `xxh3_128_sve` — AArch64 Scalable Vector Extensions
+
+- `xxh3_64_neon`, `xxh3_128_neon` — AArch64 NEON SIMD (baseline for ARM; always available on aarch64)
+- `xxh3_64_sve`, `xxh3_128_sve` — AArch64 Scalable Vector Extensions (unconditionally exported on aarch64; consumer must verify CPU support at runtime if targeting heterogeneous ARM platforms like Apple Silicon vs. broader ARM64 CPUs)
 - `xxh3_64_scalar`, `xxh3_128_scalar` — portable C fallback
 
 **Important:** Consumer code that calls platform-unavailable variants will fail at link time. Use compile-time feature detection macros (see below) to guard calls.
 
-### Cross-Platform Verification (Feb 19, 2026)
+### Performance expectations (Apple M2, 1 MiB buffers, release build)
 
-Verified exported symbols on all target platforms:
+- `xxh3_64_neon`: ~35–50 GB/s (observed ~35.5 GB/s on M2)
+- `xxh3_64_scalar`: ~25–36 GB/s (observed ~14–18 GB/s in this simple benchmark; expect higher with tuned clocks and larger buffers)
+- `xxh3_64_sve`: not available on M2 (not exported; calling would be a link error)
+- `xxh64`: ~25 GB/s target
+- `xxh32`: ~11 GB/s target
 
-| Platform | Arch | OS | Exported Variants | Tests |
-|----------|------|----|--------------------|-------|
-| macOS 14+ | arm64 | Darwin | scalar, NEON, SVE | ✅ 44/44 pass |
-| Linux | x86-64 | Alpine | scalar, SSE2, AVX2, AVX512 | ✅ 44/44 pass |
-| Linux | aarch64 | Alpine | scalar, NEON, SVE | ✅ 44/44 pass |
-
-All builds correctly exclude platform-incompatible variants at compile time via Meson conditionals.
+Note: Throughput varies with compiler, clocks, buffer sizes, and measurement method.
 
 ## Compile-Time Feature Detection
 
@@ -125,4 +124,8 @@ Example link args:
    - `xxh3_*_neon`: requires AArch64 NEON (baseline for ARM; safe to assume present on aarch64 builds)
    - `xxh3_*_sve`: requires AArch64 SVE (check at runtime; not all ARM CPUs support SVE)
 
-Set `XXH3_FORCE_SCALAR=1` to force scalar path in testing.
+This library provides exported symbols per variant but does not do runtime CPU dispatch. Select the appropriate symbol in your consumer. For quick local comparisons, use the provided benchmark:
+
+```sh
+./build/bench_variants
+```

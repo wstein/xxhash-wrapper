@@ -46,7 +46,7 @@ extern "C" {
 #if defined(__aarch64__) || defined(_M_ARM64)
 #  define XXH3_HAVE_AARCH64_SIMD 1
 #  define XXH3_HAVE_NEON   1
-#  define XXH3_HAVE_SVE    1
+#  define XXH3_HAVE_SVE    1  /* Always export on aarch64; consumer handles CPU feature detection */
 #else
 #  define XXH3_HAVE_AARCH64_SIMD 0
 #  define XXH3_HAVE_NEON   0

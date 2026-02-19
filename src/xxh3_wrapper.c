@@ -17,32 +17,28 @@ static xxh3_128_t xxh3_convert_128(XXH128_hash_t value)
     return out;
 }
 
-uint64_t xxh3_64_scalar(const void* input, size_t size, uint64_t seed)
-{
-    return XXH3_64bits_withSeed(input, size, seed);
-}
-
-xxh3_128_t xxh3_128_scalar(const void* input, size_t size, uint64_t seed)
-{
-    return xxh3_convert_128(XXH3_128bits_withSeed(input, size, seed));
-}
+// xxh3_64_scalar and xxh3_128_scalar are now in src/variants/scalar.c
 
 uint64_t xxh3_64(const void* input, size_t size, uint64_t seed)
 {
-    const char* force_scalar = getenv("XXH3_FORCE_SCALAR");
-    if (force_scalar != NULL && strcmp(force_scalar, "1") == 0) {
-        return xxh3_64_scalar(input, size, seed);
-    }
+#if defined(__aarch64__) || defined(_M_ARM64)
+    return xxh3_64_neon(input, size, seed);
+#elif defined(__x86_64__) || defined(_M_X64)
+    return xxh3_64_avx2(input, size, seed);
+#else
     return xxh3_64_scalar(input, size, seed);
+#endif
 }
 
 xxh3_128_t xxh3_128(const void* input, size_t size, uint64_t seed)
 {
-    const char* force_scalar = getenv("XXH3_FORCE_SCALAR");
-    if (force_scalar != NULL && strcmp(force_scalar, "1") == 0) {
-        return xxh3_128_scalar(input, size, seed);
-    }
+#if defined(__aarch64__) || defined(_M_ARM64)
+    return xxh3_128_neon(input, size, seed);
+#elif defined(__x86_64__) || defined(_M_X64)
+    return xxh3_128_avx2(input, size, seed);
+#else
     return xxh3_128_scalar(input, size, seed);
+#endif
 }
 
 xxh3_state_t* xxh3_createState(void)
