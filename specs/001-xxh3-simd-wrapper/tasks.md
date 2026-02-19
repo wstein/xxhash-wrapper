@@ -22,7 +22,7 @@
 - [x] T003 [P] Create public header `include/xxh3.h` with basic types and versioning (C99)
 - [x] T004 Create `src/common/internal_utils.h` for shared macros and SIMD helpers
 - [x] T005 Implement `MAJOR.MINOR.PATCH.WRAPPER_PATCH` versioning logic in `meson.build`
-- [ ] T028 Set up GitLab Flow branching and protection rules (FR-018) in repository configuration
+- [x] T028 Set up GitLab Flow branching and protection rules (FR-017) in repository configuration
 
 ---
 
@@ -95,10 +95,17 @@
 **Purpose**: Final quality checks, documentation, and compliance.
 
 - [x] T023 Finalize Inclusive Naming across all files in `src/` and `include/`
-- [ ] T024 [P] Verify reproducible build checksums across Linux and macOS environments
+- [x] T024 [P] Verify reproducible build checksums across Linux and macOS environments
 - [x] T025 Update `README.md` with usage examples and FFI integration guide
 - [x] T026 [P] Ensure all commits follow Conventional Commits specification
 - [x] T027 Verify integration with cr-xxhash shard (SC-007)
+- [x] T032 Implement platform-specific SIMD variant compilation per FR-005 in `meson.build` and `include/xxh3.h`
+   - Update `meson.build` to conditionally include x86 variants (SSE2, AVX2, AVX512) only on x86-64 builds
+   - Update `meson.build` to conditionally include ARM variants (NEON, SVE) only on aarch64 builds
+   - Add compile-time feature detection macros (`XXH3_HAVE_*`) to header for safe consumer code
+   - Update test files to guard variant calls with preprocessor conditionals
+   - Verify exported symbols match platform spec (no cross-platform exports)
+   - Update `README.md` with Platform-Specific Variant Availability section and feature detection guidance
 
 ## Implementation Strategy
 

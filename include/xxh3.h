@@ -13,6 +13,46 @@ extern "C" {
 #define XXH3_WRAPPER_VERSION_PATCH 3
 #define XXH3_WRAPPER_VERSION_WRAPPER_PATCH 0
 
+/* Compile-time version string: "MAJOR.MINOR.PATCH.WRAPPER_PATCH" */
+#define XXH3_WRAPPER_VERSION_STRING "0.8.3.0"
+
+/* Minimum required secret size (bytes) for secret-based XXH3 hashing */
+#define XXH3_SECRET_SIZE_MIN 136
+
+#if defined(__cplusplus) || (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L)
+/* Compile-time assertion that a secret buffer meets the minimum size */
+#  define XXH3_ASSERT_SECRET_SIZE(secretSize) \
+    _Static_assert((secretSize) >= XXH3_SECRET_SIZE_MIN, \
+        "Secret buffer must be at least XXH3_SECRET_SIZE_MIN (136) bytes")
+#else
+#  define XXH3_ASSERT_SECRET_SIZE(secretSize) ((void)0)
+#endif
+
+/* Platform-specific variant availability (FR-005) */
+/* x86-64: SSE2, AVX2, AVX512 variants are always available */
+/* aarch64: NEON, SVE variants are available */
+#if defined(__x86_64__) || defined(_M_X64) || defined(__amd64__)
+#  define XXH3_HAVE_X86_SIMD 1
+#  define XXH3_HAVE_SSE2     1
+#  define XXH3_HAVE_AVX2     1
+#  define XXH3_HAVE_AVX512   1
+#else
+#  define XXH3_HAVE_X86_SIMD 0
+#  define XXH3_HAVE_SSE2     0
+#  define XXH3_HAVE_AVX2     0
+#  define XXH3_HAVE_AVX512   0
+#endif
+
+#if defined(__aarch64__) || defined(_M_ARM64)
+#  define XXH3_HAVE_AARCH64_SIMD 1
+#  define XXH3_HAVE_NEON   1
+#  define XXH3_HAVE_SVE    1
+#else
+#  define XXH3_HAVE_AARCH64_SIMD 0
+#  define XXH3_HAVE_NEON   0
+#  define XXH3_HAVE_SVE    0
+#endif
+
 typedef struct {
     uint64_t high;
     uint64_t low;
@@ -29,16 +69,32 @@ xxh3_128_t xxh3_128(const void* input, size_t size, uint64_t seed);
 uint64_t xxh3_64_scalar(const void* input, size_t size, uint64_t seed);
 xxh3_128_t xxh3_128_scalar(const void* input, size_t size, uint64_t seed);
 
+/* x86-64 SIMD variants (always available on x86-64 builds) */
+#if XXH3_HAVE_SSE2
 uint64_t xxh3_64_sse2(const void* input, size_t size, uint64_t seed);
 xxh3_128_t xxh3_128_sse2(const void* input, size_t size, uint64_t seed);
+#endif
+
+#if XXH3_HAVE_AVX2
 uint64_t xxh3_64_avx2(const void* input, size_t size, uint64_t seed);
 xxh3_128_t xxh3_128_avx2(const void* input, size_t size, uint64_t seed);
+#endif
+
+#if XXH3_HAVE_AVX512
 uint64_t xxh3_64_avx512(const void* input, size_t size, uint64_t seed);
 xxh3_128_t xxh3_128_avx512(const void* input, size_t size, uint64_t seed);
+#endif
+
+/* aarch64 SIMD variants (only available on aarch64 builds) */
+#if XXH3_HAVE_NEON
 uint64_t xxh3_64_neon(const void* input, size_t size, uint64_t seed);
 xxh3_128_t xxh3_128_neon(const void* input, size_t size, uint64_t seed);
+#endif
+
+#if XXH3_HAVE_SVE
 uint64_t xxh3_64_sve(const void* input, size_t size, uint64_t seed);
 xxh3_128_t xxh3_128_sve(const void* input, size_t size, uint64_t seed);
+#endif
 
 xxh3_state_t* xxh3_createState(void);
 void xxh3_freeState(xxh3_state_t* state);

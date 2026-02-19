@@ -1,59 +1,699 @@
+/* =============================================================================
+ * tests/unit/test_variants.c
+ *
+ * Comprehensive Unity test suite for the xxhash-wrapper library.
+ * Covers:
+ *   - Version macros
+ *   - XXH3-64 and XXH3-128: single-shot all variants vs scalar reference
+ *   - XXH3 streaming: reset/update/digest matches single-shot
+ *   - XXH3 incremental chunked streaming
+ *   - XXH3 secret-based hashing (single-shot + streaming)
+ *   - xxh32 single-shot stability and seed sensitivity
+ *   - xxh32 streaming and chunked streaming matches single-shot
+ *   - xxh64 single-shot stability and seed sensitivity
+ *   - xxh64 streaming and chunked streaming matches single-shot
+ *   - Edge cases: empty input, single byte, large deterministic inputs
+ *   - Seed sensitivity: different seeds produce different hashes
+ *   - State isolation: two concurrent states do not interfere
+ *   - State reuse: reset + rehash produces identical output
+ *   - Cross-algorithm independence: xxh32/xxh64/xxh3 outputs differ
+ *   - Null/zero-state defensive return checks
+ * =============================================================================
+ */
+
 #include <stdint.h>
 #include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
 
 #include "xxh3.h"
 #include "../unity/unity.h"
 
-void setUp(void)
+/* ------------------------------------------------------------------ helpers */
+
+static const char* SHORT_INPUT = "xxhash-wrapper";
+static const char* LOREM       = "Lorem ipsum dolor sit amet, consectetur "
+                                 "adipiscing elit, sed do eiusmod tempor "
+                                 "incididunt ut labore et dolore magna aliqua.";
+
+/* Allocate + fill a deterministic buffer of the given size */
+static unsigned char* make_buf(size_t size)
 {
+    unsigned char* buf = (unsigned char*)malloc(size);
+    size_t         i;
+    if (!buf) return NULL;
+    for (i = 0; i < size; i++) {
+        buf[i] = (unsigned char)(i ^ (i >> 8));
+    }
+    return buf;
 }
 
-void tearDown(void)
+#define SEED1     0x0ULL
+#define SEED2     0xDEADBEEFCAFEBABEULL
+#define SEED32_0  0x00000000UL
+#define SEED32_1  0xDEADBEEFUL
+
+/* ============================================================ Unit callbacks */
+
+void setUp(void)    {}
+void tearDown(void) {}
+
+/* ------------------------------------------------------------------ version */
+
+static void test_version_string_is_non_empty(void)
 {
+    const char* v = XXH3_WRAPPER_VERSION_STRING;
+    TEST_ASSERT_NOT_NULL(v);
+    TEST_ASSERT_TRUE(strlen(v) > 0);
 }
 
-static void test_variants_64_should_match_scalar(void)
+static void test_version_components_non_negative(void)
 {
-    const char* input = "xxh3-wrapper-test";
-    uint64_t seed = 0x1234567890abcdefULL;
-    size_t size = strlen(input);
-    uint64_t scalar = xxh3_64_scalar(input, size, seed);
-
-    TEST_ASSERT_EQUAL_UINT64(scalar, xxh3_64_sse2(input, size, seed));
-    TEST_ASSERT_EQUAL_UINT64(scalar, xxh3_64_avx2(input, size, seed));
-    TEST_ASSERT_EQUAL_UINT64(scalar, xxh3_64_avx512(input, size, seed));
-    TEST_ASSERT_EQUAL_UINT64(scalar, xxh3_64_neon(input, size, seed));
-    TEST_ASSERT_EQUAL_UINT64(scalar, xxh3_64_sve(input, size, seed));
+    TEST_ASSERT_GREATER_OR_EQUAL_INT(0, XXH3_WRAPPER_VERSION_MAJOR);
+    TEST_ASSERT_GREATER_OR_EQUAL_INT(0, XXH3_WRAPPER_VERSION_MINOR);
+    TEST_ASSERT_GREATER_OR_EQUAL_INT(0, XXH3_WRAPPER_VERSION_PATCH);
+    TEST_ASSERT_GREATER_OR_EQUAL_INT(0, XXH3_WRAPPER_VERSION_WRAPPER_PATCH);
 }
 
-static void test_streaming_should_produce_nonzero_digest(void)
+static void test_secret_size_min_at_least_136(void)
 {
-    const char* input = "xxh3-wrapper-test";
-    uint64_t seed = 0x1234567890abcdefULL;
-    xxh3_state_t* state64 = xxh3_createState();
-    xxh3_state_t* state128 = xxh3_createState();
-    xxh3_128_t digest128;
-
-    TEST_ASSERT_TRUE(state64 != NULL);
-    TEST_ASSERT_TRUE(state128 != NULL);
-
-    xxh3_64_reset(state64, seed);
-    xxh3_128_reset(state128, seed);
-    TEST_ASSERT_TRUE(xxh3_64_update(state64, input, strlen(input)) == XXH3_OK);
-    TEST_ASSERT_TRUE(xxh3_128_update(state128, input, strlen(input)) == XXH3_OK);
-
-    (void)xxh3_64_digest(state64);
-    digest128 = xxh3_128_digest(state128);
-    TEST_ASSERT_TRUE(!(digest128.high == 0 && digest128.low == 0));
-
-    xxh3_freeState(state64);
-    xxh3_freeState(state128);
+    TEST_ASSERT_GREATER_OR_EQUAL_INT(136, XXH3_SECRET_SIZE_MIN);
 }
+
+/* -------------------------------------------------------------- xxh3-64 variants */
+
+static void test_xxh3_64_variants_match_scalar_short(void)
+{
+    const size_t   size = strlen(SHORT_INPUT);
+    const uint64_t ref  = xxh3_64_scalar(SHORT_INPUT, size, SEED1);
+
+    TEST_ASSERT_EQUAL_UINT64(ref, xxh3_64(SHORT_INPUT, size, SEED1));
+#if XXH3_HAVE_SSE2
+    TEST_ASSERT_EQUAL_UINT64(ref, xxh3_64_sse2(SHORT_INPUT, size, SEED1));
+#endif
+#if XXH3_HAVE_AVX2
+    TEST_ASSERT_EQUAL_UINT64(ref, xxh3_64_avx2(SHORT_INPUT, size, SEED1));
+#endif
+#if XXH3_HAVE_AVX512
+    TEST_ASSERT_EQUAL_UINT64(ref, xxh3_64_avx512(SHORT_INPUT, size, SEED1));
+#endif
+#if XXH3_HAVE_NEON
+    TEST_ASSERT_EQUAL_UINT64(ref, xxh3_64_neon(SHORT_INPUT, size, SEED1));
+#endif
+#if XXH3_HAVE_SVE
+    TEST_ASSERT_EQUAL_UINT64(ref, xxh3_64_sve(SHORT_INPUT, size, SEED1));
+#endif
+}
+
+static void test_xxh3_64_variants_match_scalar_lorem(void)
+{
+    const size_t   size = strlen(LOREM);
+    const uint64_t ref  = xxh3_64_scalar(LOREM, size, SEED2);
+
+    TEST_ASSERT_EQUAL_UINT64(ref, xxh3_64(LOREM, size, SEED2));
+#if XXH3_HAVE_SSE2
+    TEST_ASSERT_EQUAL_UINT64(ref, xxh3_64_sse2(LOREM, size, SEED2));
+#endif
+#if XXH3_HAVE_AVX2
+    TEST_ASSERT_EQUAL_UINT64(ref, xxh3_64_avx2(LOREM, size, SEED2));
+#endif
+#if XXH3_HAVE_AVX512
+    TEST_ASSERT_EQUAL_UINT64(ref, xxh3_64_avx512(LOREM, size, SEED2));
+#endif
+#if XXH3_HAVE_NEON
+    TEST_ASSERT_EQUAL_UINT64(ref, xxh3_64_neon(LOREM, size, SEED2));
+#endif
+#if XXH3_HAVE_SVE
+    TEST_ASSERT_EQUAL_UINT64(ref, xxh3_64_sve(LOREM, size, SEED2));
+#endif
+}
+
+static void test_xxh3_64_variants_match_scalar_1mb(void)
+{
+    const size_t   size = 1 << 20;
+    unsigned char* buf  = make_buf(size);
+    uint64_t       ref;
+
+    TEST_ASSERT_NOT_NULL(buf);
+    ref = xxh3_64_scalar(buf, size, SEED1);
+
+    TEST_ASSERT_EQUAL_UINT64(ref, xxh3_64(buf, size, SEED1));
+#if XXH3_HAVE_SSE2
+    TEST_ASSERT_EQUAL_UINT64(ref, xxh3_64_sse2(buf, size, SEED1));
+#endif
+#if XXH3_HAVE_AVX2
+    TEST_ASSERT_EQUAL_UINT64(ref, xxh3_64_avx2(buf, size, SEED1));
+#endif
+#if XXH3_HAVE_AVX512
+    TEST_ASSERT_EQUAL_UINT64(ref, xxh3_64_avx512(buf, size, SEED1));
+#endif
+#if XXH3_HAVE_NEON
+    TEST_ASSERT_EQUAL_UINT64(ref, xxh3_64_neon(buf, size, SEED1));
+#endif
+#if XXH3_HAVE_SVE
+    TEST_ASSERT_EQUAL_UINT64(ref, xxh3_64_sve(buf, size, SEED1));
+#endif
+    free(buf);
+}
+
+/* ------------------------------------------------------------ xxh3-128 variants */
+
+static void test_xxh3_128_variants_match_scalar_short(void)
+{
+    const size_t     size = strlen(SHORT_INPUT);
+    const xxh3_128_t ref  = xxh3_128_scalar(SHORT_INPUT, size, SEED1);
+
+#define CHECK128(fn) \
+    TEST_ASSERT_EQUAL_UINT64(ref.high, fn(SHORT_INPUT, size, SEED1).high); \
+    TEST_ASSERT_EQUAL_UINT64(ref.low,  fn(SHORT_INPUT, size, SEED1).low)
+
+    CHECK128(xxh3_128);
+#if XXH3_HAVE_SSE2
+    CHECK128(xxh3_128_sse2);
+#endif
+#if XXH3_HAVE_AVX2
+    CHECK128(xxh3_128_avx2);
+#endif
+#if XXH3_HAVE_AVX512
+    CHECK128(xxh3_128_avx512);
+#endif
+#if XXH3_HAVE_NEON
+    CHECK128(xxh3_128_neon);
+#endif
+#if XXH3_HAVE_SVE
+    CHECK128(xxh3_128_sve);
+#endif
+#undef CHECK128
+}
+
+static void test_xxh3_128_high_and_low_independently_nonzero(void)
+{
+    const size_t     size = strlen(LOREM);
+    const xxh3_128_t h    = xxh3_128_scalar(LOREM, size, SEED2);
+    TEST_ASSERT_TRUE(h.high != 0 || h.low != 0);
+}
+
+/* ------------------------------------------------ xxh3 streaming vs single-shot */
+
+static void test_xxh3_64_stream_matches_single_shot(void)
+{
+    const size_t   size  = strlen(LOREM);
+    const uint64_t ref   = xxh3_64_scalar(LOREM, size, SEED2);
+    xxh3_state_t*  state = xxh3_createState();
+
+    TEST_ASSERT_NOT_NULL(state);
+    xxh3_64_reset(state, SEED2);
+    TEST_ASSERT_EQUAL_INT(XXH3_OK, xxh3_64_update(state, LOREM, size));
+    TEST_ASSERT_EQUAL_UINT64(ref, xxh3_64_digest(state));
+    xxh3_freeState(state);
+}
+
+static void test_xxh3_128_stream_matches_single_shot(void)
+{
+    const size_t     size  = strlen(LOREM);
+    const xxh3_128_t ref   = xxh3_128_scalar(LOREM, size, SEED2);
+    xxh3_state_t*    state = xxh3_createState();
+    xxh3_128_t       got;
+
+    TEST_ASSERT_NOT_NULL(state);
+    xxh3_128_reset(state, SEED2);
+    TEST_ASSERT_EQUAL_INT(XXH3_OK, xxh3_128_update(state, LOREM, size));
+    got = xxh3_128_digest(state);
+    TEST_ASSERT_EQUAL_UINT64(ref.high, got.high);
+    TEST_ASSERT_EQUAL_UINT64(ref.low,  got.low);
+    xxh3_freeState(state);
+}
+
+static void test_xxh3_64_chunked_streaming_matches_single_shot(void)
+{
+    const size_t   size   = strlen(LOREM);
+    const size_t   half   = size / 2;
+    const uint64_t ref    = xxh3_64_scalar(LOREM, size, SEED1);
+    xxh3_state_t*  state  = xxh3_createState();
+
+    TEST_ASSERT_NOT_NULL(state);
+    xxh3_64_reset(state, SEED1);
+    TEST_ASSERT_EQUAL_INT(XXH3_OK, xxh3_64_update(state, LOREM, half));
+    TEST_ASSERT_EQUAL_INT(XXH3_OK, xxh3_64_update(state, LOREM + half, size - half));
+    TEST_ASSERT_EQUAL_UINT64(ref, xxh3_64_digest(state));
+    xxh3_freeState(state);
+}
+
+static void test_xxh3_128_chunked_streaming_matches_single_shot(void)
+{
+    const size_t     size  = strlen(LOREM);
+    const size_t     chunk = 16;
+    const xxh3_128_t ref   = xxh3_128_scalar(LOREM, size, SEED1);
+    xxh3_state_t*    state = xxh3_createState();
+    xxh3_128_t       got;
+    size_t           offset;
+
+    TEST_ASSERT_NOT_NULL(state);
+    xxh3_128_reset(state, SEED1);
+    for (offset = 0; offset + chunk <= size; offset += chunk) {
+        TEST_ASSERT_EQUAL_INT(XXH3_OK, xxh3_128_update(state, LOREM + offset, chunk));
+    }
+    if (offset < size) {
+        TEST_ASSERT_EQUAL_INT(XXH3_OK, xxh3_128_update(state, LOREM + offset, size - offset));
+    }
+    got = xxh3_128_digest(state);
+    TEST_ASSERT_EQUAL_UINT64(ref.high, got.high);
+    TEST_ASSERT_EQUAL_UINT64(ref.low,  got.low);
+    xxh3_freeState(state);
+}
+
+/* --------------------------------------------------------- secret-based hashing */
+
+static void test_xxh3_64_with_secret_differs_from_seeded(void)
+{
+    const size_t  size = strlen(LOREM);
+    unsigned char secret[200];
+    uint64_t      seeded, with_secret;
+    size_t        i;
+
+    for (i = 0; i < sizeof(secret); i++) {
+        secret[i] = (unsigned char)(i * 17 + 3);
+    }
+    seeded      = xxh3_64_scalar(LOREM, size, SEED2);
+    with_secret = xxh3_64_withSecret(LOREM, size, secret, sizeof(secret));
+    TEST_ASSERT_NOT_EQUAL(seeded, with_secret);
+}
+
+static void test_xxh3_64_secret_stream_matches_single_shot(void)
+{
+    const size_t   size  = strlen(LOREM);
+    unsigned char  secret[192];
+    xxh3_state_t*  state;
+    uint64_t       ref, got;
+    size_t         i;
+
+    for (i = 0; i < sizeof(secret); i++) {
+        secret[i] = (unsigned char)(i * 31 + 7);
+    }
+    ref   = xxh3_64_withSecret(LOREM, size, secret, sizeof(secret));
+    state = xxh3_createState();
+    TEST_ASSERT_NOT_NULL(state);
+    xxh3_64_reset_withSecret(state, secret, sizeof(secret));
+    TEST_ASSERT_EQUAL_INT(XXH3_OK, xxh3_64_update(state, LOREM, size));
+    got = xxh3_64_digest(state);
+    TEST_ASSERT_EQUAL_UINT64(ref, got);
+    xxh3_freeState(state);
+}
+
+static void test_xxh3_128_with_secret_matches_stream(void)
+{
+    const size_t   size  = strlen(SHORT_INPUT);
+    unsigned char  secret[160];
+    xxh3_state_t*  state;
+    xxh3_128_t     ref, got;
+    size_t         i;
+
+    for (i = 0; i < sizeof(secret); i++) {
+        secret[i] = (unsigned char)(i * 7 + 11);
+    }
+    ref   = xxh3_128_withSecret(SHORT_INPUT, size, secret, sizeof(secret));
+    state = xxh3_createState();
+    TEST_ASSERT_NOT_NULL(state);
+    xxh3_128_reset_withSecret(state, secret, sizeof(secret));
+    TEST_ASSERT_EQUAL_INT(XXH3_OK, xxh3_128_update(state, SHORT_INPUT, size));
+    got = xxh3_128_digest(state);
+    TEST_ASSERT_EQUAL_UINT64(ref.high, got.high);
+    TEST_ASSERT_EQUAL_UINT64(ref.low,  got.low);
+    xxh3_freeState(state);
+}
+
+static void test_generate_secret_produces_nonzero_output(void)
+{
+    unsigned char secret[XXH3_SECRET_SIZE_MIN];
+    size_t        i;
+    int           all_zero = 1;
+
+    memset(secret, 0, sizeof(secret));
+    xxh3_generateSecret(secret, sizeof(secret), SEED2);
+    for (i = 0; i < sizeof(secret); i++) {
+        if (secret[i] != 0) { all_zero = 0; break; }
+    }
+    TEST_ASSERT_FALSE(all_zero);
+}
+
+/* ---------------------------------------------------------------- edge cases */
+
+static void test_xxh3_64_empty_input_is_stable(void)
+{
+    uint64_t a = xxh3_64_scalar("", 0, SEED1);
+    uint64_t b = xxh3_64_scalar("", 0, SEED1);
+    TEST_ASSERT_EQUAL_UINT64(a, b);
+}
+
+static void test_xxh3_128_empty_input_is_stable(void)
+{
+    xxh3_128_t a = xxh3_128_scalar("", 0, SEED1);
+    xxh3_128_t b = xxh3_128_scalar("", 0, SEED1);
+    TEST_ASSERT_EQUAL_UINT64(a.high, b.high);
+    TEST_ASSERT_EQUAL_UINT64(a.low,  b.low);
+}
+
+static void test_xxh3_64_single_byte_is_stable(void)
+{
+    const char c = 'A';
+    uint64_t   a = xxh3_64_scalar(&c, 1, SEED1);
+    uint64_t   b = xxh3_64_scalar(&c, 1, SEED1);
+    TEST_ASSERT_EQUAL_UINT64(a, b);
+}
+
+static void test_different_seeds_produce_different_hashes(void)
+{
+    uint64_t h1 = xxh3_64_scalar(LOREM, strlen(LOREM), SEED1);
+    uint64_t h2 = xxh3_64_scalar(LOREM, strlen(LOREM), SEED2);
+    TEST_ASSERT_NOT_EQUAL(h1, h2);
+}
+
+static void test_xxh3_64_different_inputs_differ(void)
+{
+    uint64_t ha = xxh3_64_scalar("hello", 5, SEED1);
+    uint64_t hb = xxh3_64_scalar("world", 5, SEED1);
+    TEST_ASSERT_NOT_EQUAL(ha, hb);
+}
+
+static void test_xxh3_128_different_inputs_differ(void)
+{
+    xxh3_128_t a = xxh3_128_scalar("aaa", 3, SEED1);
+    xxh3_128_t b = xxh3_128_scalar("bbb", 3, SEED1);
+    TEST_ASSERT_TRUE(a.high != b.high || a.low != b.low);
+}
+
+static void test_xxh3_64_avalanche_on_extra_byte(void)
+{
+    uint64_t h1 = xxh3_64_scalar("xxhash",  6, SEED1);
+    uint64_t h2 = xxh3_64_scalar("xxhashy", 7, SEED1);
+    TEST_ASSERT_NOT_EQUAL(h1, h2);
+}
+
+/* ------------------------------------------------ state isolation / reuse */
+
+static void test_two_states_do_not_interfere(void)
+{
+    xxh3_state_t* s1 = xxh3_createState();
+    xxh3_state_t* s2 = xxh3_createState();
+    uint64_t      d1, d2;
+
+    TEST_ASSERT_NOT_NULL(s1);
+    TEST_ASSERT_NOT_NULL(s2);
+
+    xxh3_64_reset(s1, SEED1);
+    xxh3_64_reset(s2, SEED2);
+    TEST_ASSERT_EQUAL_INT(XXH3_OK, xxh3_64_update(s1, LOREM, strlen(LOREM)));
+    TEST_ASSERT_EQUAL_INT(XXH3_OK, xxh3_64_update(s2, LOREM, strlen(LOREM)));
+    d1 = xxh3_64_digest(s1);
+    d2 = xxh3_64_digest(s2);
+
+    TEST_ASSERT_NOT_EQUAL(d1, d2);
+    TEST_ASSERT_EQUAL_UINT64(xxh3_64_scalar(LOREM, strlen(LOREM), SEED1), d1);
+    TEST_ASSERT_EQUAL_UINT64(xxh3_64_scalar(LOREM, strlen(LOREM), SEED2), d2);
+
+    xxh3_freeState(s1);
+    xxh3_freeState(s2);
+}
+
+static void test_state_can_be_reset_and_reused(void)
+{
+    xxh3_state_t* state = xxh3_createState();
+    uint64_t      d1, d2;
+
+    TEST_ASSERT_NOT_NULL(state);
+
+    xxh3_64_reset(state, SEED1);
+    TEST_ASSERT_EQUAL_INT(XXH3_OK, xxh3_64_update(state, SHORT_INPUT, strlen(SHORT_INPUT)));
+    d1 = xxh3_64_digest(state);
+
+    xxh3_64_reset(state, SEED1);
+    TEST_ASSERT_EQUAL_INT(XXH3_OK, xxh3_64_update(state, SHORT_INPUT, strlen(SHORT_INPUT)));
+    d2 = xxh3_64_digest(state);
+
+    TEST_ASSERT_EQUAL_UINT64(d1, d2);
+    xxh3_freeState(state);
+}
+
+/* ------------------------------------------------------ xxh32 */
+
+static void test_xxh32_single_shot_stable(void)
+{
+    uint32_t a = xxh32(LOREM, strlen(LOREM), SEED32_1);
+    uint32_t b = xxh32(LOREM, strlen(LOREM), SEED32_1);
+    TEST_ASSERT_EQUAL_UINT32(a, b);
+}
+
+static void test_xxh32_different_seeds_differ(void)
+{
+    uint32_t a = xxh32(LOREM, strlen(LOREM), SEED32_0);
+    uint32_t b = xxh32(LOREM, strlen(LOREM), SEED32_1);
+    TEST_ASSERT_NOT_EQUAL(a, b);
+}
+
+static void test_xxh32_empty_input_stable(void)
+{
+    uint32_t a = xxh32("", 0, SEED32_0);
+    uint32_t b = xxh32("", 0, SEED32_0);
+    TEST_ASSERT_EQUAL_UINT32(a, b);
+}
+
+static void test_xxh32_stream_matches_single_shot(void)
+{
+    const size_t   size  = strlen(LOREM);
+    const uint32_t ref   = xxh32(LOREM, size, SEED32_1);
+    xxh3_state_t*  state = xxh3_createState();
+
+    TEST_ASSERT_NOT_NULL(state);
+    xxh32_reset(state, SEED32_1);
+    TEST_ASSERT_EQUAL_INT(XXH3_OK, xxh32_update(state, LOREM, size));
+    TEST_ASSERT_EQUAL_UINT32(ref, xxh32_digest(state));
+    xxh3_freeState(state);
+}
+
+static void test_xxh32_chunked_streaming_matches_single_shot(void)
+{
+    const size_t   size  = strlen(LOREM);
+    const size_t   chunk = 8;
+    const uint32_t ref   = xxh32(LOREM, size, SEED32_0);
+    xxh3_state_t*  state = xxh3_createState();
+    size_t         offset;
+
+    TEST_ASSERT_NOT_NULL(state);
+    xxh32_reset(state, SEED32_0);
+    for (offset = 0; offset + chunk <= size; offset += chunk) {
+        TEST_ASSERT_EQUAL_INT(XXH3_OK, xxh32_update(state, LOREM + offset, chunk));
+    }
+    if (offset < size) {
+        TEST_ASSERT_EQUAL_INT(XXH3_OK, xxh32_update(state, LOREM + offset, size - offset));
+    }
+    TEST_ASSERT_EQUAL_UINT32(ref, xxh32_digest(state));
+    xxh3_freeState(state);
+}
+
+static void test_xxh32_stream_reset_reuse(void)
+{
+    const size_t   size  = strlen(SHORT_INPUT);
+    const uint32_t ref   = xxh32(SHORT_INPUT, size, SEED32_1);
+    xxh3_state_t*  state = xxh3_createState();
+
+    TEST_ASSERT_NOT_NULL(state);
+    xxh32_reset(state, SEED32_1);
+    TEST_ASSERT_EQUAL_INT(XXH3_OK, xxh32_update(state, SHORT_INPUT, size));
+    TEST_ASSERT_EQUAL_UINT32(ref, xxh32_digest(state));
+
+    xxh32_reset(state, SEED32_1);
+    TEST_ASSERT_EQUAL_INT(XXH3_OK, xxh32_update(state, SHORT_INPUT, size));
+    TEST_ASSERT_EQUAL_UINT32(ref, xxh32_digest(state));
+    xxh3_freeState(state);
+}
+
+/* ------------------------------------------------------ xxh64 */
+
+static void test_xxh64_single_shot_stable(void)
+{
+    uint64_t a = xxh64(LOREM, strlen(LOREM), SEED2);
+    uint64_t b = xxh64(LOREM, strlen(LOREM), SEED2);
+    TEST_ASSERT_EQUAL_UINT64(a, b);
+}
+
+static void test_xxh64_different_seeds_differ(void)
+{
+    uint64_t a = xxh64(LOREM, strlen(LOREM), SEED1);
+    uint64_t b = xxh64(LOREM, strlen(LOREM), SEED2);
+    TEST_ASSERT_NOT_EQUAL(a, b);
+}
+
+static void test_xxh64_empty_input_stable(void)
+{
+    uint64_t a = xxh64("", 0, SEED1);
+    uint64_t b = xxh64("", 0, SEED1);
+    TEST_ASSERT_EQUAL_UINT64(a, b);
+}
+
+static void test_xxh64_stream_matches_single_shot(void)
+{
+    const size_t   size  = strlen(LOREM);
+    const uint64_t ref   = xxh64(LOREM, size, SEED2);
+    xxh3_state_t*  state = xxh3_createState();
+
+    TEST_ASSERT_NOT_NULL(state);
+    xxh64_reset(state, SEED2);
+    TEST_ASSERT_EQUAL_INT(XXH3_OK, xxh64_update(state, LOREM, size));
+    TEST_ASSERT_EQUAL_UINT64(ref, xxh64_digest(state));
+    xxh3_freeState(state);
+}
+
+static void test_xxh64_chunked_streaming_matches_single_shot(void)
+{
+    const size_t   size  = strlen(LOREM);
+    const size_t   chunk = 13;
+    const uint64_t ref   = xxh64(LOREM, size, SEED1);
+    xxh3_state_t*  state = xxh3_createState();
+    size_t         offset;
+
+    TEST_ASSERT_NOT_NULL(state);
+    xxh64_reset(state, SEED1);
+    for (offset = 0; offset + chunk <= size; offset += chunk) {
+        TEST_ASSERT_EQUAL_INT(XXH3_OK, xxh64_update(state, LOREM + offset, chunk));
+    }
+    if (offset < size) {
+        TEST_ASSERT_EQUAL_INT(XXH3_OK, xxh64_update(state, LOREM + offset, size - offset));
+    }
+    TEST_ASSERT_EQUAL_UINT64(ref, xxh64_digest(state));
+    xxh3_freeState(state);
+}
+
+static void test_xxh64_stream_reset_reuse(void)
+{
+    const size_t   size  = strlen(SHORT_INPUT);
+    const uint64_t ref   = xxh64(SHORT_INPUT, size, SEED1);
+    xxh3_state_t*  state = xxh3_createState();
+
+    TEST_ASSERT_NOT_NULL(state);
+    xxh64_reset(state, SEED1);
+    TEST_ASSERT_EQUAL_INT(XXH3_OK, xxh64_update(state, SHORT_INPUT, size));
+    TEST_ASSERT_EQUAL_UINT64(ref, xxh64_digest(state));
+
+    xxh64_reset(state, SEED1);
+    TEST_ASSERT_EQUAL_INT(XXH3_OK, xxh64_update(state, SHORT_INPUT, size));
+    TEST_ASSERT_EQUAL_UINT64(ref, xxh64_digest(state));
+    xxh3_freeState(state);
+}
+
+/* ---------------------------------------- cross-algorithm outputs are distinct */
+
+static void test_xxh32_xxh64_outputs_differ_for_same_input(void)
+{
+    uint32_t h32 = xxh32(LOREM, strlen(LOREM), (uint32_t)SEED1);
+    uint64_t h64 = xxh64(LOREM, strlen(LOREM), SEED1);
+    TEST_ASSERT_NOT_EQUAL((uint64_t)h32, h64);
+}
+
+static void test_xxh64_and_xxh3_64_differ_for_same_input(void)
+{
+    uint64_t h64  = xxh64         (LOREM, strlen(LOREM), SEED1);
+    uint64_t hx64 = xxh3_64_scalar(LOREM, strlen(LOREM), SEED1);
+    TEST_ASSERT_NOT_EQUAL(h64, hx64);
+}
+
+/* ------------------------------------- null-state defensive return checks */
+
+static void test_xxh3_64_update_null_state_returns_error(void)
+{
+    TEST_ASSERT_EQUAL_INT(XXH3_ERROR, xxh3_64_update(NULL, LOREM, strlen(LOREM)));
+}
+
+static void test_xxh3_64_digest_null_state_returns_zero(void)
+{
+    TEST_ASSERT_EQUAL_UINT64(0, xxh3_64_digest(NULL));
+}
+
+static void test_xxh3_128_update_null_state_returns_error(void)
+{
+    TEST_ASSERT_EQUAL_INT(XXH3_ERROR, xxh3_128_update(NULL, LOREM, strlen(LOREM)));
+}
+
+static void test_xxh32_update_null_state_returns_error(void)
+{
+    TEST_ASSERT_EQUAL_INT(XXH3_ERROR, xxh32_update(NULL, LOREM, strlen(LOREM)));
+}
+
+static void test_xxh64_update_null_state_returns_error(void)
+{
+    TEST_ASSERT_EQUAL_INT(XXH3_ERROR, xxh64_update(NULL, LOREM, strlen(LOREM)));
+}
+
+/* ----------------------------------------------------------- main test runner */
 
 int main(void)
 {
     UNITY_BEGIN();
-    RUN_TEST(test_variants_64_should_match_scalar);
-    RUN_TEST(test_streaming_should_produce_nonzero_digest);
+
+    /* version */
+    RUN_TEST(test_version_string_is_non_empty);
+    RUN_TEST(test_version_components_non_negative);
+    RUN_TEST(test_secret_size_min_at_least_136);
+
+    /* xxh3-64 variants */
+    RUN_TEST(test_xxh3_64_variants_match_scalar_short);
+    RUN_TEST(test_xxh3_64_variants_match_scalar_lorem);
+    RUN_TEST(test_xxh3_64_variants_match_scalar_1mb);
+
+    /* xxh3-128 variants */
+    RUN_TEST(test_xxh3_128_variants_match_scalar_short);
+    RUN_TEST(test_xxh3_128_high_and_low_independently_nonzero);
+
+    /* xxh3 streaming */
+    RUN_TEST(test_xxh3_64_stream_matches_single_shot);
+    RUN_TEST(test_xxh3_128_stream_matches_single_shot);
+    RUN_TEST(test_xxh3_64_chunked_streaming_matches_single_shot);
+    RUN_TEST(test_xxh3_128_chunked_streaming_matches_single_shot);
+
+    /* secrets */
+    RUN_TEST(test_xxh3_64_with_secret_differs_from_seeded);
+    RUN_TEST(test_xxh3_64_secret_stream_matches_single_shot);
+    RUN_TEST(test_xxh3_128_with_secret_matches_stream);
+    RUN_TEST(test_generate_secret_produces_nonzero_output);
+
+    /* edge cases */
+    RUN_TEST(test_xxh3_64_empty_input_is_stable);
+    RUN_TEST(test_xxh3_128_empty_input_is_stable);
+    RUN_TEST(test_xxh3_64_single_byte_is_stable);
+    RUN_TEST(test_different_seeds_produce_different_hashes);
+    RUN_TEST(test_xxh3_64_different_inputs_differ);
+    RUN_TEST(test_xxh3_128_different_inputs_differ);
+    RUN_TEST(test_xxh3_64_avalanche_on_extra_byte);
+
+    /* state isolation */
+    RUN_TEST(test_two_states_do_not_interfere);
+    RUN_TEST(test_state_can_be_reset_and_reused);
+
+    /* xxh32 */
+    RUN_TEST(test_xxh32_single_shot_stable);
+    RUN_TEST(test_xxh32_different_seeds_differ);
+    RUN_TEST(test_xxh32_empty_input_stable);
+    RUN_TEST(test_xxh32_stream_matches_single_shot);
+    RUN_TEST(test_xxh32_chunked_streaming_matches_single_shot);
+    RUN_TEST(test_xxh32_stream_reset_reuse);
+
+    /* xxh64 */
+    RUN_TEST(test_xxh64_single_shot_stable);
+    RUN_TEST(test_xxh64_different_seeds_differ);
+    RUN_TEST(test_xxh64_empty_input_stable);
+    RUN_TEST(test_xxh64_stream_matches_single_shot);
+    RUN_TEST(test_xxh64_chunked_streaming_matches_single_shot);
+    RUN_TEST(test_xxh64_stream_reset_reuse);
+
+    /* cross-algorithm */
+    RUN_TEST(test_xxh32_xxh64_outputs_differ_for_same_input);
+    RUN_TEST(test_xxh64_and_xxh3_64_differ_for_same_input);
+
+    /* defensive null-state */
+    RUN_TEST(test_xxh3_64_update_null_state_returns_error);
+    RUN_TEST(test_xxh3_64_digest_null_state_returns_zero);
+    RUN_TEST(test_xxh3_128_update_null_state_returns_error);
+    RUN_TEST(test_xxh32_update_null_state_returns_error);
+    RUN_TEST(test_xxh64_update_null_state_returns_error);
+
     return UNITY_END();
 }

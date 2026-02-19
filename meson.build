@@ -2,6 +2,7 @@ project(
   'xxhash-wrapper',
   'c',
   version: '0.8.3.0',
+  meson_version: '>= 1.1',
   default_options: [
     'c_std=c99',
     'warning_level=2',
@@ -20,15 +21,32 @@ test_inc = include_directories(
   'tests/unity',
 )
 
+# Platform-specific variant compilation per FR-005
+# x86/x64: always compile scalar, SSE2, AVX2, AVX512
+# aarch64: only compile ARM NEON, SVE (when targeting aarch64)
 wrapper_sources = files(
   'src/xxh3_wrapper.c',
-  'src/variants/x86/sse2.c',
-  'src/variants/x86/avx2.c',
-  'src/variants/x86/avx512.c',
-  'src/variants/arm/neon.c',
-  'src/variants/arm/sve.c',
   'vendor/xxHash/xxhash.c',
 )
+
+# Add x86 variants only on x86_64 builds
+if host_machine.cpu_family() == 'x86_64'
+  wrapper_sources += files(
+    'src/variants/x86/sse2.c',
+    'src/variants/x86/avx2.c',
+    'src/variants/x86/avx512.c',
+  )
+  message('Building x86/x64 variants: SSE2, AVX2, AVX512')
+endif
+
+# Add ARM variants only on aarch64 builds
+if host_machine.cpu_family() == 'aarch64'
+  wrapper_sources += files(
+    'src/variants/arm/neon.c',
+    'src/variants/arm/sve.c',
+  )
+  message('Building aarch64 variants: NEON, SVE')
+endif
 
 libxxh3_wrapper_shared = library(
   'xxh3_wrapper',
@@ -70,7 +88,13 @@ bench_exe = executable(
   dependencies: [xxh3_dep],
 )
 
-if false
+# Fuzz target: enabled only when the compiler supports -fsanitize=fuzzer,address
+# Activate with: meson setup -Db_sanitize=address -Dfuzz=true builddir
+option_fuzz = get_option('fuzz')
+has_fuzzer = cc.has_argument('-fsanitize=fuzzer')
+has_asan   = cc.has_argument('-fsanitize=address')
+
+if option_fuzz and has_fuzzer and has_asan
   executable(
     'fuzz_xxh3',
     'tests/fuzz/fuzz_xxh3.c',
@@ -79,4 +103,6 @@ if false
     c_args: ['-fsanitize=fuzzer,address'],
     link_args: ['-fsanitize=fuzzer,address'],
   )
+elif option_fuzz
+  warning('Fuzz target requested but compiler does not support -fsanitize=fuzzer,address; skipping.')
 endif

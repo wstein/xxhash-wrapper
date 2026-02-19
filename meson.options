@@ -1,0 +1,6 @@
+option(
+  'fuzz',
+  type: 'boolean',
+  value: false,
+  description: 'Build the libFuzzer fuzz harness (requires -fsanitize=fuzzer,address support)',
+)

@@ -1,3 +1,9 @@
+/* _POSIX_C_SOURCE 199309L is required for clock_gettime / CLOCK_MONOTONIC
+ * on POSIX platforms when compiling with -std=c99. */
+#if !defined(_POSIX_C_SOURCE) || _POSIX_C_SOURCE < 199309L
+#  define _POSIX_C_SOURCE 199309L
+#endif
+
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -42,11 +48,21 @@ int main(void)
     memset(data, 7, size);
 
     run_bench("scalar", xxh3_64_scalar, data, size);
+#if XXH3_HAVE_SSE2
     run_bench("sse2", xxh3_64_sse2, data, size);
+#endif
+#if XXH3_HAVE_AVX2
     run_bench("avx2", xxh3_64_avx2, data, size);
+#endif
+#if XXH3_HAVE_AVX512
     run_bench("avx512", xxh3_64_avx512, data, size);
+#endif
+#if XXH3_HAVE_NEON
     run_bench("neon", xxh3_64_neon, data, size);
+#endif
+#if XXH3_HAVE_SVE
     run_bench("sve", xxh3_64_sve, data, size);
+#endif
 
     free(data);
     return 0;
