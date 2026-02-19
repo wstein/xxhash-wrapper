@@ -52,6 +52,7 @@ See [PLATFORM_VERIFICATION.md](docs/PLATFORM_VERIFICATION.md) for detailed cross
 
 - XXH3 single-shot variants: `xxh3_64_<variant>()`, `xxh3_128_<variant>()`
 - Streaming API: `xxh3_createState()`, `xxh3_64_reset/update/digest()`, `xxh3_128_reset/update/digest()`
+- State copy: `xxh3_copyState()` — deep copy of streaming state for branching workflows (FR-023)
 - Secret API: `xxh3_64_withSecret()`, `xxh3_128_withSecret()`, `XXH3_generateSecret()`
 - Legacy/traditional scalar exports: `xxh32()`, `xxh64()`
 

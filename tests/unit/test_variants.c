@@ -322,6 +322,78 @@ static void test_xxh3_128_with_secret_matches_stream(void)
     xxh3_freeState(state);
 }
 
+/* ---------------------------------------------------------------- state copying */
+
+static void test_xxh3_64_copy_state_matches_continued_hashing(void)
+{
+    const size_t   size1 = strlen(SHORT_INPUT);
+    const size_t   size2 = strlen(LOREM);
+    xxh3_state_t*  state1 = xxh3_createState();
+    xxh3_state_t*  state2 = xxh3_createState();
+    uint64_t       ref, got;
+
+    TEST_ASSERT_NOT_NULL(state1);
+    TEST_ASSERT_NOT_NULL(state2);
+
+    /* State 1: update once, then copy to state2, continue updating state2 */
+    xxh3_64_reset(state1, SEED1);
+    TEST_ASSERT_EQUAL_INT(XXH3_OK, xxh3_64_update(state1, SHORT_INPUT, size1));
+    TEST_ASSERT_EQUAL_INT(XXH3_OK, xxh3_copyState(state2, state1));
+    TEST_ASSERT_EQUAL_INT(XXH3_OK, xxh3_64_update(state2, LOREM, size2));
+    got = xxh3_64_digest(state2);
+
+    /* Reference: single state that processes both in order */
+    xxh3_state_t* ref_state = xxh3_createState();
+    TEST_ASSERT_NOT_NULL(ref_state);
+    xxh3_64_reset(ref_state, SEED1);
+    TEST_ASSERT_EQUAL_INT(XXH3_OK, xxh3_64_update(ref_state, SHORT_INPUT, size1));
+    TEST_ASSERT_EQUAL_INT(XXH3_OK, xxh3_64_update(ref_state, LOREM, size2));
+    ref = xxh3_64_digest(ref_state);
+
+    TEST_ASSERT_EQUAL_UINT64(ref, got);
+    xxh3_freeState(state1);
+    xxh3_freeState(state2);
+    xxh3_freeState(ref_state);
+}
+
+static void test_xxh3_128_copy_state_branches_hashing(void)
+{
+    const size_t   size1 = strlen(SHORT_INPUT);
+    const size_t   size2a = 5;
+    const size_t   size2b = strlen(LOREM) - size2a;
+    xxh3_state_t*  state1 = xxh3_createState();
+    xxh3_state_t*  state2 = xxh3_createState();
+    xxh3_state_t*  state3 = xxh3_createState();
+    xxh3_128_t     branch1, branch2, branch_ref;
+
+    TEST_ASSERT_NOT_NULL(state1);
+    TEST_ASSERT_NOT_NULL(state2);
+    TEST_ASSERT_NOT_NULL(state3);
+
+    /* Initial state: same seed, same first update */
+    xxh3_128_reset(state1, SEED2);
+    TEST_ASSERT_EQUAL_INT(XXH3_OK, xxh3_128_update(state1, SHORT_INPUT, size1));
+
+    /* Branch 1: copy and continue with LOREM as single update */
+    TEST_ASSERT_EQUAL_INT(XXH3_OK, xxh3_copyState(state2, state1));
+    TEST_ASSERT_EQUAL_INT(XXH3_OK, xxh3_128_update(state2, LOREM, strlen(LOREM)));
+    branch1 = xxh3_128_digest(state2);
+
+    /* Branch 2: copy and continue with LOREM in chunks */
+    TEST_ASSERT_EQUAL_INT(XXH3_OK, xxh3_copyState(state3, state1));
+    TEST_ASSERT_EQUAL_INT(XXH3_OK, xxh3_128_update(state3, LOREM, size2a));
+    TEST_ASSERT_EQUAL_INT(XXH3_OK, xxh3_128_update(state3, LOREM + size2a, size2b));
+    branch2 = xxh3_128_digest(state3);
+
+    /* Both branches should produce identical results */
+    TEST_ASSERT_EQUAL_UINT64(branch1.high, branch2.high);
+    TEST_ASSERT_EQUAL_UINT64(branch1.low,  branch2.low);
+
+    xxh3_freeState(state1);
+    xxh3_freeState(state2);
+    xxh3_freeState(state3);
+}
+
 static void test_generate_secret_produces_nonzero_output(void)
 {
     unsigned char secret[XXH3_SECRET_SIZE_MIN];
@@ -667,6 +739,10 @@ int main(void)
     /* state isolation */
     RUN_TEST(test_two_states_do_not_interfere);
     RUN_TEST(test_state_can_be_reset_and_reused);
+
+    /* state copy operations */
+    RUN_TEST(test_xxh3_64_copy_state_matches_continued_hashing);
+    RUN_TEST(test_xxh3_128_copy_state_branches_hashing);
 
     /* xxh32 */
     RUN_TEST(test_xxh32_single_shot_stable);

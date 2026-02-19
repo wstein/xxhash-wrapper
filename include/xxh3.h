@@ -115,6 +115,9 @@ void xxh3_generateSecret(void* secretBuffer, size_t secretSize, uint64_t seed);
 #define XXH3_generateSecret(secretBuffer, secretSize, seed) \
     xxh3_generateSecret((secretBuffer), (secretSize), (seed))
 
+/* State copying: Clone a hash state for branching computation (FR-023) */
+int xxh3_copyState(xxh3_state_t* dst, const xxh3_state_t* src);
+
 /* XXH32 and XXH64: scalar-only single-shot functions (no SIMD variants) */
 uint32_t xxh32(const void* input, size_t size, uint32_t seed);
 uint64_t xxh64(const void* input, size_t size, uint64_t seed);

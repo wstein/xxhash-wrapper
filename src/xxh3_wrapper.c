@@ -161,6 +161,30 @@ void xxh3_generateSecret(void* secretBuffer, size_t secretSize, uint64_t seed)
 }
 
 /* ============================================
+   State Cloning: Copy a hash state (FR-023)
+   ============================================ */
+
+int xxh3_copyState(xxh3_state_t* dst, const xxh3_state_t* src)
+{
+    if (src == NULL || src->state == NULL) {
+        return XXH3_ERROR;
+    }
+    if (dst == NULL) {
+        return XXH3_ERROR;
+    }
+    if (dst->state == NULL) {
+        /* Destination state not initialized; try to allocate */
+        dst->state = XXH3_createState();
+        if (dst->state == NULL) {
+            return XXH3_ERROR;
+        }
+    }
+    /* Copy vendor state */
+    XXH3_copyState(dst->state, src->state);
+    return XXH3_OK;
+}
+
+/* ============================================
    XXH32: Legacy 32-bit hash
    ============================================ */
 

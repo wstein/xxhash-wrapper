@@ -1120,3 +1120,70 @@ All three target platforms verified:
 * ✅ **All tests passing**: 44/44 on each platform
 * ✅ **FR-005 compliance**: Platform conditionals working correctly
 * ✅ **No cross-platform symbol leakage**: Each build exports only CPU-valid variants
+
+=== 25. State Copy Operations (FR-023) — February 19, 2026
+
+==== 25.1 Feature Implementation
+
+**Feature Requirement**: Export `xxh3_copyState()` function to enable state checkpointing and branching workflows.
+
+**Implemented Functions**:
+* `int xxh3_copyState(xxh3_state_t* dst, const xxh3_state_t* src)`
+  - Deep copy of complete internal hash state
+  - Works with all streaming variants: XXH3-64, XXH3-128, XXH32, XXH64
+  - Enables independent branching from a checkpoint
+  - Return value: `XXH3_OK` (0) on success, `XXH3_ERROR` (-1) on failure (null pointers)
+  - Shared state type: All variants use the same `xxh3_state_t` opaque structure
+
+**Header Declaration** (`include/xxh3.h`):
+[source,c]
+----
+/* State copy operations (FR-023) */
+int xxh3_copyState(xxh3_state_t* dst, const xxh3_state_t* src);
+----
+
+**Implementation** (`src/xxh3_wrapper.c`):
+- Simple `memcpy()` of internal state structure
+- Null-pointer checking with appropriate error returns
+- Memory-safe: no allocations, no state corruption risk
+
+==== 25.2 Test Coverage
+
+**New Test Functions**:
+* `test_xxh3_64_copy_state_matches_continued_hashing()`: Verify that copying a state mid-stream produces identical output as continuing from original state
+* `test_xxh3_128_copy_state_branches_hashing()`: Test branching behavior — two independent continuations from copied state produce identical results
+
+**Test Results**:
+[source,bash]
+----
+$ meson test -C build-test
+1/1 xxhash-wrapper:unit-variants        OK             0.63s
+
+✅ All 46 unit tests passing
+✅ Copy state tests integrated and passing
+----
+
+==== 25.3 Use Cases Enabled
+
+1. **State Checkpointing**: Hash intermediate data, save state checkpoint, and branch into multiple independent continuations (e.g., compute multiple hashes from a common prefix)
+2. **Parallel Processing**: Copy state at block boundaries and process remainder blocks in parallel, recombining results
+3. **Hashing Workflows**: Build composite hashes by copying state between different content sections
+
+==== 25.4 Specification Update
+
+**Feature added to spec.md**:
+[source]
+----
+- **FR-023**: Library MUST export state copy functions for all streaming variants:
+  `int xxh3_copyState(xxh3_state_t* dst, const xxh3_state_t* src)`.
+  Deep copy of internal state; modifying destination does not affect source.
+  Shared `xxh3_copyState()` function works with XXH3, xxh32, and xxh64 via shared type.
+----
+
+==== 25.5 Status
+
+* ✅ Declaration in header
+* ✅ Implementation in source
+* ✅ Unit tests added and passing
+* ✅ Specification updated
+* ✅ Ready for integration
