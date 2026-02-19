@@ -10,9 +10,16 @@
 
 ==== 1.1 Algorithm Families
 
-* *XXH32*: Classic 32-bit hash algorithm
-* *XXH64*: Classic 64-bit hash algorithm +
-* *XXH3*: Modern, highly optimized hash suite with multiple variants
+* *XXH32*: Classic 32-bit hash algorithm.
+  _Wrapper export_: `xxh32()` — scalar-only, no SIMD variants, legacy use.
+* *XXH64*: Classic 64-bit hash algorithm.
+  _Wrapper export_: `xxh64()` — scalar-only, no SIMD variants; recommended as the
+  high-performance scalar fallback when SIMD is not available, as its simpler
+  accumulation loop may outperform `xxh3_64_scalar()` on non-SIMD CPUs.
+* *XXH3*: Modern, highly optimized hash suite with multiple variants.
+  _Wrapper export_: `xxh3_64_<variant>()` and `xxh3_128_<variant>()` — one named
+  symbol per SIMD variant (scalar, SSE2, AVX2, AVX512, NEON, SVE); consumers
+  select variant; no internal dispatch in the wrapper.
 
 ==== 1.2 Performance Characteristics
 
@@ -160,6 +167,9 @@ Example consumer dispatch pattern:
 [source,c]
 ----
 // Consumer-side (e.g. Crystal FFI layer) pseudocode
+// xxh32() and xxh64() are always available without any capability check.
+// Use xxh64() as the scalar fallback: simpler algorithm, often faster than
+// xxh3_64_scalar() on non-SIMD CPUs.
 if (cpu_has_avx512()) {
     result = xxh3_64_avx512(input, size, seed);
 } else if (cpu_has_avx2()) {
@@ -167,7 +177,8 @@ if (cpu_has_avx512()) {
 } else if (cpu_has_sse2()) {
     result = xxh3_64_sse2(input, size, seed);
 } else {
-    result = xxh3_64_scalar(input, size, seed);
+    // No SIMD: prefer xxh64() over xxh3_64_scalar() for better throughput
+    result = xxh64(input, size, (uint64_t)seed);
 }
 ----
 
@@ -298,6 +309,11 @@ The wrapper compiles all applicable SIMD variants into the library and exports e
 |===
 |Platform |Exported Variants |Notes
 
+|All platforms
+|`xxh32`, `xxh64`
+|Scalar-only; no variant suffix; always exported.
+`xxh64` recommended as scalar fallback when no SIMD
+
 |x86/x64
 |`xxh3_64_scalar`, `xxh3_64_sse2`, `xxh3_64_avx2`, `xxh3_64_avx512`
 |All four always present in every x86/x64 build
@@ -366,7 +382,7 @@ was chosen:
 
 ....
 specs/
-├── index.adoc                   # Main documentation entry point (replaces docs/README.md)
+├── index.adoc                   # Main documentation entry point
 ├── api/                        # API documentation
 │   ├── overview.adoc
 │   ├── xxh3.adoc
@@ -421,7 +437,7 @@ rendering
 
 ....
 specs/
-├── index.adoc                   # Main documentation entry point (replaces docs/README.md)
+├── index.adoc                   # Main documentation entry point
 ├── api/                        # API documentation
 │   ├── overview.adoc
 │   ├── xxh3.adoc
