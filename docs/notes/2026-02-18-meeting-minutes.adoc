@@ -124,9 +124,16 @@ disable
 
 === 6. Runtime Dispatcher Mechanism
 
-==== 6.1 x86/x64 Dispatcher
+==== 6.1 x86/x64 Dispatcher (Vendor Implementation — NOT used by wrapper)
 
-* *XXH++_++featureTest*: Hierarchical capability detection
+[IMPORTANT]
+====
+The vendor xxHash dispatcher described here is the *upstream library's* internal mechanism.
+The xxhash-wrapper project *does NOT use* this mechanism.
+See <<wrapper-design>> for the wrapper's export-based approach.
+====
+
+* *XXH_featureTest*: Hierarchical capability detection
 * *CPUID*: Hardware feature verification
 * *XGETBV*: OS support verification for extended registers
 * *Function Pointer Assignment*: Dynamic selection of optimal
@@ -138,15 +145,48 @@ implementation
 * Compile-time selection for ARM, PowerPC, S390X
 * Explicit error on non-x86 platforms
 
+[[wrapper-design]]
+==== 6.3 xxhash-wrapper Design: Multi-Variant Export (No Internal Dispatch)
+
+The wrapper project takes a *different approach* from the vendor dispatcher:
+
+* *All SIMD variants are exported as separately named public symbols*: `xxh3_64_scalar()`, `xxh3_64_sse2()`, `xxh3_64_avx2()`, `xxh3_64_avx512()`, `xxh3_64_neon()`, `xxh3_64_sve()`, and equivalents for 128-bit and streaming APIs.
+* *The library contains no internal dispatch logic*: no CPUID calls, no function pointer tables.
+* *CPU detection and variant selection are the consumer's responsibility*: a language binding (e.g. cr-xxhash) or application performs CPU feature detection (CPUID + XGETBV) and calls the appropriate exported symbol.
+* *Rationale*: Gives consumers full control over dispatch strategy (runtime, compile-time, config-file, environment variable, etc.) without forcing a single opinionated approach into the library.
+
+Example consumer dispatch pattern:
+
+[source,c]
+----
+// Consumer-side (e.g. Crystal FFI layer) pseudocode
+if (cpu_has_avx512()) {
+    result = xxh3_64_avx512(input, size, seed);
+} else if (cpu_has_avx2()) {
+    result = xxh3_64_avx2(input, size, seed);
+} else if (cpu_has_sse2()) {
+    result = xxh3_64_sse2(input, size, seed);
+} else {
+    result = xxh3_64_scalar(input, size, seed);
+}
+----
+
 '''''
 
-=== 7. Implementation Details
+=== 7. Implementation Details (Vendor Internals)
 
-==== 7.1 Function Generation
+[NOTE]
+====
+This section describes vendor xxHash internals for reference.
+The wrapper does *not* use these macros or the vendor dispatch mechanism.
+See <<wrapper-design>> for the wrapper's approach.
+====
 
-* *x86*: XXH++_++DEFINE++_++DISPATCH++_++FUNCS macro for runtime
-selection
-* *ARM*: Compile-time mapping via XXH++_++VECTOR macro
+==== 7.1 Vendor Function Generation
+
+* *x86*: `XXH_DEFINE_DISPATCH_FUNCS` macro for runtime
+selection (vendor only)
+* *ARM*: Compile-time mapping via `XXH_VECTOR` macro
 * *S390X/PowerPC*: Shared VSX code path with architecture-specific
 intrinsics
 
@@ -185,12 +225,14 @@ intrinsics
 [arabic]
 . *Manual vs Auto Vectorization*: Manual vectorization preferred due to
 compiler inefficiencies
-. *Runtime vs Compile-time Selection*: Runtime for x86/x64, compile-time
+. *Runtime vs Compile-time Selection (vendor)*: Vendor uses runtime for x86/x64, compile-time
 for other architectures
-. *Header-Only Implementation*: Enabled for performance-critical
-applications
-. *Cross-Platform Strategy*: Dual build systems for maximum
-compatibility
+. *Wrapper Dispatch Strategy*: The wrapper exports *all SIMD variants as separate named functions*;
+no internal dispatch. Consumers implement CPU detection and variant selection themselves.
+. *Language Standard*: C99 (`-std=c99`) for all wrapper code; no C11 or compiler extensions.
+. *Header-Only Implementation*: Not used by wrapper (library-only mode; dynamic/static linking).
+. *Cross-Platform Strategy*: Meson build system; x86/x64 exports all SIMD variants
+unconditionally; ARM exports NEON/SVE only when compiled for aarch64.
 
 '''''
 
@@ -208,13 +250,13 @@ Zen4{plus}
 === 11. Technical Questions Addressed
 
 [arabic]
-. *XXH3++_++128bits*: 128-bit variant with improved collision resistance
+. *XXH3_128bits*: 128-bit variant with improved collision resistance
 . *Vectorization*: Manual SIMD implementation across multiple
 architectures
-. *Build System*: Dual Makefile/CMake with header-only mode
+. *Build System*: Meson (exclusive; no CMake or Makefile); C99 standard for wrapper code
+. *Multi-Variant Export*: Wrapper exports all SIMD variants as named symbols; no internal dispatch
 . *Cross-Compilation*: Supported with known limitations
-. *Runtime Dispatcher*: x86/x64 exclusive feature for optimal
-instruction selection
+. *No Dispatcher in Wrapper*: x86/x64 dispatch is consumer-side (CPUID + XGETBV)
 
 '''''
 
@@ -244,9 +286,29 @@ updates, and clear project structure
 ==== 13.2 Build System Architecture
 
 * *Primary Build System*: Meson (replacing CMake and Makefile approaches)
-* *Language Standard*: C99 (corrected from C89 mentioned in discussion)
+* *Language Standard*: C99 (`-std=c99`) for all wrapper source code (`src/`, `include/`); no C11 or compiler extensions
 * *Build Configuration*: Static library compilation with custom wrapper
 code
+
+==== 13.3 Multi-Variant Export Architecture
+
+The wrapper compiles all applicable SIMD variants into the library and exports each as a distinct symbol:
+
+[cols="1,2,2"]
+|===
+|Platform |Exported Variants |Notes
+
+|x86/x64
+|`xxh3_64_scalar`, `xxh3_64_sse2`, `xxh3_64_avx2`, `xxh3_64_avx512`
+|All four always present in every x86/x64 build
+
+|aarch64
+|`xxh3_64_scalar`, `xxh3_64_neon`, `xxh3_64_sve`
+|SVE only when `-Dcpu_family` target supports ARMv8.2+
+|===
+
+* 128-bit and streaming variants follow the same `xxh3_128_<variant>` and `xxh3_64_<variant>_reset/update/digest` naming pattern.
+* CPU feature detection and variant selection are *consumer-side* concerns.
 
 ==== 13.3 Project Structure
 ....
