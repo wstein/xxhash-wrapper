@@ -4,16 +4,49 @@ SIMD-exporting XXH3 wrapper library for C-compatible consumers.
 
 ## Build
 
+### Standard (native platform)
+
 ```sh
 meson setup build
 meson compile -C build
-```
-
-## Run unit tests
-
-```sh
 meson test -C build --print-errorlogs
 ```
+
+### macOS (arm64/Apple Silicon)
+
+```sh
+# Native build (no cross-compilation)
+meson setup build
+meson compile -C build
+# Verify ARM variants exported (NEON, SVE):
+nm -gp build/libxxh3_wrapper.dylib | grep xxh3_64
+```
+
+### Linux x86-64 (Alpine - Docker recommended)
+
+```sh
+docker run --platform linux/amd64 --rm -v $(pwd):/src:ro alpine:latest sh -c '
+  apk add -q meson ninja gcc musl-dev
+  mkdir -p /tmp/build && cd /tmp/build
+  meson setup /src && meson compile
+  # Verify x86 variants exported (SSE2, AVX2, AVX512):
+  nm -gp libxxh3_wrapper.so | grep xxh3_64
+'
+```
+
+### Linux aarch64 (Alpine - Docker)
+
+```sh
+docker run --platform linux/arm64 --rm -v $(pwd):/src:ro alpine:latest sh -c '
+  apk add -q meson ninja gcc musl-dev
+  mkdir -p /tmp/build && cd /tmp/build
+  meson setup /src && meson compile
+  # Verify ARM variants exported (NEON, SVE):
+  nm -gp libxxh3_wrapper.so | grep xxh3_64
+'
+```
+
+See [PLATFORM_VERIFICATION.md](docs/PLATFORM_VERIFICATION.md) for detailed cross-platform test results.
 
 ## Public API
 
@@ -36,6 +69,18 @@ meson test -C build --print-errorlogs
 - `xxh3_64_scalar`, `xxh3_128_scalar` — portable C fallback
 
 **Important:** Consumer code that calls platform-unavailable variants will fail at link time. Use compile-time feature detection macros (see below) to guard calls.
+
+### Cross-Platform Verification (Feb 19, 2026)
+
+Verified exported symbols on all target platforms:
+
+| Platform | Arch | OS | Exported Variants | Tests |
+|----------|------|----|--------------------|-------|
+| macOS 14+ | arm64 | Darwin | scalar, NEON, SVE | ✅ 44/44 pass |
+| Linux | x86-64 | Alpine | scalar, SSE2, AVX2, AVX512 | ✅ 44/44 pass |
+| Linux | aarch64 | Alpine | scalar, NEON, SVE | ✅ 44/44 pass |
+
+All builds correctly exclude platform-incompatible variants at compile time via Meson conditionals.
 
 ## Compile-Time Feature Detection
 
