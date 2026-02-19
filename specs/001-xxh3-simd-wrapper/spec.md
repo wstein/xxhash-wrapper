@@ -24,6 +24,8 @@
 
 A language binding (e.g., Crystal's cr-xxhash) or downstream application needs to use XXH3 hashing functions. It links the C library and calls one of the exported variant functions (`xxh3_64_scalar()`, `xxh3_64_sse2()`, `xxh3_64_avx2()`, etc.). The library does **not** implement internal CPU dispatch; instead it exports each SIMD variant as a distinct named symbol, and the consumer chooses which variant to call — implementing their own runtime dispatch, build-time selection, or configuration logic as needed.
 
+The library additionally exports scalar-only `xxh32()` (legacy, 32-bit) and `xxh64()` (traditional, 64-bit) functions. `xxh64()` is particularly relevant as a high-performance scalar fallback: on CPUs without supported SIMD, `xxh64()` may outperform `xxh3_64_scalar()` due to its simpler algorithm, making it a practical default when SIMD variants are unavailable.
+
 **Why this priority**: This is the primary consumer use case and delivers immediate value — end users get fast, correct hashing without manual configuration.
 
 **Independent Test**: Can be tested by verifying that a C/Crystal program linked against the library can hash data and receive correct results; no runtime crashes or crashes on unsupported CPUs.
@@ -34,6 +36,7 @@ A language binding (e.g., Crystal's cr-xxhash) or downstream application needs t
 2. **Given** a program on x86_64 calls `xxh3_64_sse2(data, size, seed)`, **When** the function returns, **Then** the result matches the canonical xxHash reference implementation bit-for-bit and performance is measurably faster than scalar.
 3. **Given** a program on aarch64 calls `xxh3_128_neon(data, size, seed)`, **When** the function returns, **Then** the result matches the canonical 128-bit xxHash reference implementation.
 4. **Given** a program calls `xxh3_64_scalar(data, size, seed)`, **When** the function returns, **Then** the scalar fallback produces correct results on any supported platform.
+5. **Given** a program on a CPU with no SIMD support calls `xxh64(data, size, seed)`, **When** the function returns, **Then** the result matches the canonical xxHash XXH64 reference and throughput meets or exceeds `xxh3_64_scalar()` on that CPU.
 
 ---
 
@@ -88,13 +91,13 @@ Users and CI verify that the library produces correct hashing output across all 
 
 ### Functional Requirements
 
-- **FR-001**: Library MUST export **single-shot** hash functions: `uint64_t xxh3_64(const void* input, size_t size, uint64_t seed)` and `xxh3_128_t xxh3_128(const void* input, size_t size, uint64_t seed)`, where `xxh3_128_t` is a struct containing two `uint64_t` fields (high/low).
+- **FR-001**: Library MUST export **XXH3 single-shot** functions as separately named per-variant symbols (e.g., `uint64_t xxh3_64_scalar(const void* input, size_t size, uint64_t seed)`, `xxh3_64_sse2()`, `xxh3_64_avx2()`, …) and equivalent `xxh3_128_<variant>()` functions returning `xxh3_128_t` (struct with `uint64_t high, low`). See FR-005/FR-006 for the full variant matrix. See FR-016 for legacy scalar exports.
 - **FR-002**: Library MUST also export **streaming APIs**: `xxh3_state_t`, `xxh3_state_t* xxh3_createState()`, `void xxh3_freeState(xxh3_state_t*)`, `void xxh3_64_reset(xxh3_state_t*, uint64_t seed)`, `XXH_errorcode xxh3_64_update(xxh3_state_t*, const void* input, size_t size)`, `uint64_t xxh3_64_digest(xxh3_state_t*)` (and equivalent 128-bit variants).
 - **FR-003**: Library MUST export **secret-based variants**: `xxh3_64_withSecret(const void* input, size_t size, const void* secret, size_t secretSize)` and equivalent streaming reset/update for secret-based hashing.
 - **FR-004**: Library MUST export `void XXH3_generateSecret(void* secretBuffer, size_t secretSize, uint64_t seed)` to derive custom secrets from seeds.
 - **FR-005**: Library MUST export each SIMD variant as a **separately named public function** (e.g., `xxh3_64_scalar()`, `xxh3_64_sse2()`, `xxh3_64_avx2()`, `xxh3_64_avx512()`, `xxh3_128_neon()`). The library does **not** implement internal CPU dispatch; consumers implement their own runtime dispatch, build-time selection, or configuration mechanism as appropriate for their use case.
 - **FR-006**: x86/x64 SIMD variant functions (scalar, SSE2, AVX2, AVX512) MUST be compiled into every x86/x64 library build and always exported. ARM aarch64 variant functions (NEON, SVE) are exported only when the library is compiled targeting an aarch64 platform via Meson build flags.
-- **FR-007**: Library MUST always export scalar fallback functions (`xxh3_64_scalar()`, `xxh3_128_scalar()`, and streaming equivalents) on every supported platform. Scalar variants are safe to call unconditionally without CPU capability checks.
+- **FR-007**: Library MUST always export XXH3 scalar fallback functions (`xxh3_64_scalar()`, `xxh3_128_scalar()`, and streaming equivalents) on every supported platform. Scalar variants are safe to call unconditionally without CPU capability checks. `xxh64()` (FR-016) is also always unconditionally safe and may be preferred over `xxh3_64_scalar()` on CPUs without SIMD support due to its simpler algorithm.
 - **FR-008**: All SIMD implementations (SSE2, AVX2, AVX512, NEON, SVE) MUST produce identical output to the scalar reference and the canonical xxHash library for identical inputs.
 - **FR-009**: Library MUST accept inputs of any size, including empty (size=0) and very large inputs (up to `SIZE_MAX`).
 - **FR-010**: Library MUST be distributed as a compiled C-compatible library (static and/or shared) usable from C, C++, and language bindings via FFI.
@@ -103,11 +106,14 @@ Users and CI verify that the library produces correct hashing output across all 
 - **FR-013**: Library MUST support CPU feature overrides or environment-based control (optional, e.g., `XXH3_FORCE_SCALAR=1`) for testing and debugging.
 - **FR-014**: Library MUST support both dynamic (runtime) linking and static linking for all platforms.
 - **FR-015**: All wrapper source code (`src/`, `include/`) MUST conform to the **C99 language standard** (`-std=c99`). No C11 or compiler-specific extensions (GNU/Clang) are permitted in wrapper code. The vendored xxHash library is compiled as upstream provides it (also C99-compatible).
+- **FR-016**: Library MUST export **legacy and traditional scalar-only** hash functions: `uint32_t xxh32(const void* input, size_t size, uint32_t seed)` (legacy, 32-bit output) and `uint64_t xxh64(const void* input, size_t size, uint64_t seed)` (traditional, 64-bit output). These have **no SIMD variants** and **no variant suffix** in their symbol name. Both functions are always exported on all platforms. `xxh64()` is recommended as a high-performance scalar alternative when SIMD is not available, as it may outperform `xxh3_64_scalar()` on CPUs without SIMD acceleration.
 
 ### Key Entities
 
 - **Hash State** (`xxh3_state_t`): Internal state structure (opaque to users) that holds algorithm state during streaming (incremental) hashing; used with `reset()`, `update()`, `digest()`. One state struct exists per active variant; variant choice is locked at `reset()` time.
 - **Variant Symbol**: Each exported named function representing one SIMD or scalar implementation of XXH3 (e.g., `xxh3_64_scalar`, `xxh3_64_sse2`, `xxh3_64_avx2`, `xxh3_64_avx512`, `xxh3_64_neon`). All variant symbols for the same operation produce identical output for identical inputs; they differ only in internal instruction set used.
+- **Legacy Function** (`xxh32`): Scalar-only 32-bit hash exported for backwards compatibility with older systems or use cases requiring 32-bit output. No SIMD variants; no variant suffix. Always exported on all platforms.
+- **Traditional Function** (`xxh64`): Scalar-only 64-bit hash exported as a mature, well-tested alternative. No SIMD variants; no variant suffix. Always exported on all platforms. On CPUs lacking SIMD support, `xxh64()` may deliver higher throughput than `xxh3_64_scalar()` due to its simpler accumulation loop.
 - **Consumer Dispatch**: CPU feature detection and variant selection are the **consumer's responsibility**. Consumers query CPU capabilities (e.g., CPUID + XGETBV on x86) and call the appropriate exported variant function. Required CPU prerequisites per variant are documented in the library header.
 - **Seed**: A 64-bit input parameter that modifies the hash output; enables domain separation and hash randomization.
 - **Secret**: A 136-192 byte blob used for collision resistance; can be derived from seed via `XXH3_generateSecret()` or provided custom.
@@ -123,7 +129,7 @@ Users and CI verify that the library produces correct hashing output across all 
 ### Measurable Outcomes
 
 - **SC-001**: All hash outputs (64-bit and 128-bit) MUST match the canonical xxHash reference implementation bit-for-bit for any input (validated by unit tests and property tests with >1M random inputs).
-- **SC-002**: SIMD implementations (SSE2, AVX2, NEON) MUST run on their target CPUs and produce identical outputs to the scalar implementation.
+- **SC-002**: All XXH3 SIMD implementations (SSE2, AVX2, AVX512, NEON, SVE) MUST run on their target CPUs and produce identical outputs to `xxh3_64_scalar()` / `xxh3_128_scalar()`. `xxh32()` and `xxh64()` outputs MUST each match their respective canonical xxHash reference implementations.
 - **SC-003**: The library MUST run without crashes, undefined behaviour, or data corruption on all supported platforms (Linux x86_64/aarch64, macOS x86_64/arm64); verified by fuzz tests, AddressSanitizer, and MemorySanitizer runs.
 - **SC-004**: Performance improvements MUST be measurable: SIMD implementations must demonstrate ≥2x throughput improvement over scalar on supporting CPUs, or trade-off is documented and justified.
 - **SC-005**: ABI/binary compatibility MUST be preserved across patch versions; breaking ABI changes MUST be detected by CI and require explicit versioning.
@@ -147,6 +153,7 @@ Users and CI verify that the library produces correct hashing output across all 
 
 - Q: Does the library implement internal CPU dispatch (vendor's CPUID/function-pointer mechanism)? → A: **No. The library exports each SIMD variant as a separately named function; consumers implement their own dispatch or selection logic.**
 - Q: Language standard for all wrapper source code? → A: **C99 (`-std=c99`)** — no C11 or compiler extensions in `src/` or `include/`.
+- Q: Which hash algorithms are exported, and with what variant structure? → A: **XXH3-64 and XXH3-128 with scalar + SIMD variants** (named `xxh3_64_<variant>`, `xxh3_128_<variant>`); plus **xxh32 (legacy)** and **xxh64 (traditional)** as scalar-only flat functions with no variant suffix. `xxh64()` is recommended as the scalar fallback when no SIMD is available.
 
 ## Assumptions
 
@@ -156,8 +163,8 @@ Users and CI verify that the library produces correct hashing output across all 
   - **ARM aarch64**: NEON and SVE variant symbols are exported only when the library is built targeting aarch64 (via `meson setup -Dcpu_family=aarch64`). Scalar is always exported. No runtime detection in the library.
 - **Language Standard**: All wrapper code (`src/`, `include/`) is C99 (`-std=c99`). No C11 or GCC/Clang extensions.
 - **Build System**: Meson is the primary build tool; no CMake or Makefile.
-- **API Scope**: Both **single-shot** (`xxh3_64_<variant>()`, `xxh3_128_<variant>()`) and **streaming** (`xxh3_64_<variant>_reset/update/digest`) APIs are public per variant; both seed-based and secret-based variants exposed.
+- **API Scope**: Both **single-shot** (`xxh3_64_<variant>()`, `xxh3_128_<variant>()`) and **streaming** (`xxh3_64_<variant>_reset/update/digest`) APIs are public per XXH3 variant; both seed-based and secret-based variants exposed. Additionally, scalar-only `xxh32()` and `xxh64()` are always exported (no streaming, no SIMD variants).
 - **Linking**: Library is distributed as compiled artifacts (static + shared); no header-only mode (users must link against library).
-- **Symbols**: Fixed public symbol prefix (`xxh3_*`, `XXH3_*`) with SIMD variant suffix (`_scalar`, `_sse2`, `_avx2`, `_avx512`, `_neon`, `_sve`); no namespace macro support.
+- **Symbols**: XXH3 functions use prefix `xxh3_*` / `XXH3_*` with SIMD variant suffix (`_scalar`, `_sse2`, `_avx2`, `_avx512`, `_neon`, `_sve`). Legacy/traditional functions use plain names `xxh32` and `xxh64` with no suffix. No namespace macro support.
 - **Error Handling**: Contract-based (preconditions documented); calling a SIMD variant on a CPU that does not support the required instruction set is undefined behavior. The library header documents required CPU features per variant.
 - **Threading**: No mutable shared state; library is reentrant and thread-safe for concurrent read-only hashing.

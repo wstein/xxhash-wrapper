@@ -1,4 +1,4 @@
-# Specification Quality Checklist: SIMD-Optimized XXH3 C Library with Runtime CPU Dispatch
+# Specification Quality Checklist: SIMD-Optimized XXH3 C Library with Multi-Variant Export
 
 **Purpose**: Validate specification completeness and quality before proceeding to planning
 **Created**: 2026-02-18
@@ -14,6 +14,7 @@
 | **Streaming API** | Single-shot only | Both (+streaming) | Enable efficient streaming hash use cases |
 | **Platforms** | General (all x86) | x86/x64 + ARM | Explicit scope definition for MVP |
 | **CPU Dispatch Strategy** | Vendor runtime dispatch | No internal dispatch; export all named variants | Simplicity; consumer controls selection |
+| **xxh32 / xxh64 exports** | Not in original scope | Added (FR-016) | Legacy/traditional scalar-only exports |
 | **C99 standard** | Mentioned in meeting notes | Now explicit in FR-015 | Codified in spec |
 | **Secrets API** | Seed-only | Both seed + secrets | Full compatibility with vendor API |
 | **SIMD Targets** | SSE2, AVX2 | SSE2, AVX2, AVX512 | Performance consistency across HW |
@@ -50,6 +51,7 @@
 - [x] CPU feature override for testing (FR-013)
 - [x] Both dynamic + static linking (FR-014)
 - [x] C99 language standard for wrapper code (FR-015)
+- [x] xxh32 (legacy, 32-bit, scalar-only) and xxh64 (traditional, 64-bit, scalar-only) exported (FR-016)
 
 ## Feature Readiness
 
@@ -72,6 +74,7 @@
 - Secrets API exposed (seed + custom secret variants)
 - AVX512 included in MVP (performance consistency)
 - **C99** language standard explicit in FR-015
+- **xxh32** (legacy, 32-bit scalar) and **xxh64** (traditional, 64-bit scalar) exported as flat functions; `xxh64()` recommended as scalar fallback when no SIMD
 
 **Ready for next phase**: Run `/speckit.plan` to generate implementation plan and research phase.
 
