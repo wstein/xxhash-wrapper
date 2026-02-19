@@ -639,3 +639,126 @@ The inclusive naming standard applies strictly to:
 * **Documentation**: Spec files, README, and meeting minutes.
 
 **Decision**: The standard does NOT apply to the vendored `xxHash` source code in `vendor/`. This ensures the library can be updated to new upstream versions without maintaining a set of naming-related patches which could introduce logic errors or maintenance burden.
+
+'''''
+
+=== 21. Test Framework Selection
+
+==== 21.1 Requirements Analysis
+
+The project requires a testing framework that aligns with:
+
+* **Build System**: Meson (exclusive)
+* **Language Standard**: C99 (`-std=c99`)
+* **Testing Types**: Unit tests, fuzz tests, benchmarks, ABI regression checks
+* **Platforms**: x86/x64 (SSE2, AVX2, AVX512), ARM aarch64 (NEON, SVE)
+
+==== 21.2 Framework Options Evaluated
+
+[cols="1,2,2,2,2"]
+|===
+|Aspect |Unity |Check |cmocka |Current (Minimal)
+
+|Meson Integration
+|⭐⭐⭐⭐⭐ Excellent
+|⭐⭐⭐⭐ Good
+|⭐⭐⭐⭐ Good
+|⭐⭐⭐⭐ Basic
+
+|C99 Compatibility
+|⭐⭐⭐⭐⭐ Full
+|⭐⭐⭐⭐ Good
+|⭐⭐⭐⭐⭐ Full
+|⭐⭐⭐⭐⭐ Full
+
+|Learning Curve
+|⭐⭐⭐⭐ Easy
+|⭐⭐⭐ Medium
+|⭐⭐⭐⭐ Easy
+|N/A
+
+|Dependencies
+|Zero (header-only)
+|POSIX (-lcheck)
+|External dep.
+|None
+
+|Features
+|⭐⭐⭐⭐ Good
+|⭐⭐⭐⭐ Excellent
+|⭐⭐⭐⭐ Good
+|Basic (0/1 exit)
+
+|Maintenance
+|⭐⭐⭐⭐ Active
+|⭐⭐⭐⭐ Good
+|⭐⭐⭐⭐ Good
+|N/A
+|===
+
+==== 21.3 Detailed Evaluation
+
+===== Unity (Rating: 9/10)
+
+* **Pros**:
+** Zero dependencies - single header file
+** Header-only option available
+** Native Meson integration via `meson.add_test_setup()`
+** Lightweight (~2KB overhead)
+** Industry proven (embedded, game engines, automotive)
+** Easy test discovery and assertions
+** Flexible (can use as header-only or compiled)
+
+* **Cons**:
+** No built-in mocking support (not required for this project)
+** Less features than Check/cmocka (acceptable trade-off)
+
+===== Check (Rating: 8/10)
+
+* **Pros**: Mature, POSIX-based, excellent for regression testing
+* **Cons**: Requires linking (`-lcheck -lsubunit`), heavier than Unity
+
+===== cmocka (Rating: 7.5/10)
+
+* **Pros**: From CMake project, clean API design
+* **Cons**: External dependency required
+
+==== 21.4 Fuzz Testing
+
+* **libFuzzer**: Already integrated and working ✅ Keep
+* Industry standard for fuzzing, integrates with GCC/Clang
+
+==== 21.5 Benchmarking
+
+* Current manual approach in `tests/bench/bench_variants.c` ✅ Keep
+* Can add Criteri later if more sophisticated benchmarking needed
+
+==== 21.6 Decision: Unity Framework
+
+[IMPORTANT]
+**FINAL DECISION**: The project adopts **Unity** as its unit testing framework.
+
+*Unity is the optimal choice because:*
+. Zero external dependencies (header-only)
+. Native Meson integration
+. Full C99 compliance
+. Lightweight - appropriate for performance-critical library
+. Active maintenance and community support
+. Simple learning curve for contributors
+. Matches project's modern, agile philosophy
+
+==== 21.7 Implementation Plan
+
+. Add Unity as Meson subproject or header-only include
+. Migrate existing `tests/unit/test_variants.c` to use Unity test macros
+. Keep libFuzzer for fuzz testing (already working)
+. Keep manual benchmarks in `bench_variants.c`
+. Continue using `scripts/check-abi.sh` for ABI regression checks
+
+==== 21.8 Benefits of Unity Integration
+
+* **Test Discovery**: Automatic test collection and reporting
+* **Better Assertions**: Rich assertion macros with clear failure messages
+* **CI Integration**: Native Meson test runner support
+* **Maintainability**: Clear test structure for future contributors
+* **Performance Focus**: Low overhead preserves benchmark accuracy
