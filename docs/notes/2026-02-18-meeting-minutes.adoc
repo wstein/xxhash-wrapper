@@ -1,0 +1,404 @@
+== Meeting Minutes: XXHash Library Implementation and Specification Review
+
+=== Date: February 17-18, 2026
+
+=== Attendees: Technical Review Team
+
+'''''
+
+=== 1. XXHash Algorithm Overview
+
+==== 1.1 Algorithm Families
+
+* *XXH32*: Classic 32-bit hash algorithm
+* *XXH64*: Classic 64-bit hash algorithm +
+* *XXH3*: Modern, highly optimized hash suite with multiple variants
+
+==== 1.2 Performance Characteristics
+
+* Achieves speeds at the limits of RAM performance
+* Vectorized implementations reach 29.6 GB/s to 59.4 GB/s depending on
+instruction set
+* Optimized for both small and large inputs
+
+'''''
+
+=== 2. Vectorization and SIMD Support
+
+==== 2.1 Supported Instruction Sets
+
+* *x86/x64*: SSE2, AVX2, AVX512
+* *ARM*: NEON, SVE (Scalable Vector Extension)
+* *PowerPC*: VSX (Vector Scalar Extension)
+* *Other*: ZVector (s390x), WASM SIMD128, LoongArch (LSX, LASX), RISC-V
+Vector (RVV)
+
+==== 2.2 Implementation Strategy
+
+* Manual vectorization preferred over compiler auto-vectorization
+* Runtime dispatcher for x86/x64 platforms to select optimal instruction
+set
+* Compile-time selection for other architectures
+
+==== 2.3 Performance by Architecture
+
+* *AVX2*: ~59.4 GB/s
+* *SSE2*: ~31.5 GB/s +
+* *NEON*: Optimized for Cortex-A73/A76 cores
+* *SVE*: Optimized for ARMv8.2 and newer
+
+'''''
+
+=== 3. XXH3 Algorithm Details
+
+==== 3.1 XXH3++_++128bits Variant
+
+* Produces 128-bit hash using XXH128++_++hash++_++t structure (low64,
+high64)
+* Performance: 29.6-57.9 GB/s with vectorization
+* Higher collision resistance than 64-bit variant
+* Avoids theoretical seed-dependent multi-collisions
+
+==== 3.2 Input Length Adaptation
+
+* *0-16 bytes*: Specialized mixing logic
+* *17-240 bytes*: Standard processing
+* *++>++240 bytes*: Large input optimization with 8 accumulators
+
+==== 3.3 Security Features
+
+* *Seeds*: 64-bit values for predictable randomization
+* *Secrets*: 136-192 byte blobs for collision resistance
+* *XXH3++_++generateSecret()*: Function to derive high-entropy secrets
+from custom seeds
+
+'''''
+
+=== 4. Build System Architecture
+
+==== 4.1 Dual Build Systems
+
+* *Makefile*: Optimized for UNIX-like systems, supports
+cross-compilation
+* *CMake*: Cross-platform support, Visual Studio integration
+
+==== 4.2 Header-Only Mode
+
+* *XXH++_++INLINE++_++ALL*: Transforms library into header-only
+implementation
+* Performance gains of 200%{plus} for compile-time constant lengths
+* Eliminates linking overhead
+
+==== 4.3 Build Modifiers
+
+* *XXH++_++SIZE++_++OPT*: Size optimization vs performance trade-off
+* *XXH++_++NO++_++XXH3*: Disable XXH3 family
+* *XXH++_++NO++_++STREAM*: Disable streaming APIs
+* *XXH++_++VECTOR*: Manual vector instruction set selection
+
+'''''
+
+=== 5. Architecture-Specific Implementations
+
+==== 5.1 ARM Support
+
+* *AArch64*: NEON standard, SVE for ARMv8.2{plus}
+* *ARMv7-A*: NEON acceleration, scalar fallback
+* *Embedded*: ARMv6 with UMAAL DSP instruction, Thumb-2 support
+* *Apple Silicon*: Explicit detection and optimization
+
+==== 5.2 S390X Implementation
+
+* Uses VSX code path shared with PowerPC
+* ZVector instruction set support
+* Runtime testing via QEMU emulation
+
+==== 5.3 Cross-Compilation
+
+* Active CI testing for cross-compilation scenarios
+* Support for building ARM64 on AMD64 environments
+* Known issues with CMake dispatcher detection requiring explicit
+disable
+
+'''''
+
+=== 6. Runtime Dispatcher Mechanism
+
+==== 6.1 x86/x64 Dispatcher
+
+* *XXH++_++featureTest*: Hierarchical capability detection
+* *CPUID*: Hardware feature verification
+* *XGETBV*: OS support verification for extended registers
+* *Function Pointer Assignment*: Dynamic selection of optimal
+implementation
+
+==== 6.2 Architecture Limitations
+
+* Dispatcher exclusive to x86/x64 platforms
+* Compile-time selection for ARM, PowerPC, S390X
+* Explicit error on non-x86 platforms
+
+'''''
+
+=== 7. Implementation Details
+
+==== 7.1 Function Generation
+
+* *x86*: XXH++_++DEFINE++_++DISPATCH++_++FUNCS macro for runtime
+selection
+* *ARM*: Compile-time mapping via XXH++_++VECTOR macro
+* *S390X/PowerPC*: Shared VSX code path with architecture-specific
+intrinsics
+
+==== 7.2 Namespace Management
+
+* *XXH++_++NAMESPACE*: Prefixes all public API symbols
+* Enables multiple library versions in single binary
+* Prevents symbol collisions
+
+==== 7.3 Special Export Requirements
+
+* Custom xxhash++_++export.c files for multi-variant exports
+* Target attributes for instruction set isolation
+* Wrapper functions for public API exposure
+
+'''''
+
+=== 8. Quality Assurance and Testing
+
+==== 8.1 CI Matrix
+
+* Extensive compiler testing (GCC 4.8-14, Clang, MSVC)
+* Architecture validation (x86, ARM, PowerPC, S390X)
+* Special test cases (c90test, nostdlibtest)
+
+==== 8.2 Performance Validation
+
+* Benchmark integration with inline implementations
+* Collision detection testing
+* Cross-platform consistency verification
+
+'''''
+
+=== 9. Key Technical Decisions
+
+[arabic]
+. *Manual vs Auto Vectorization*: Manual vectorization preferred due to
+compiler inefficiencies
+. *Runtime vs Compile-time Selection*: Runtime for x86/x64, compile-time
+for other architectures
+. *Header-Only Implementation*: Enabled for performance-critical
+applications
+. *Cross-Platform Strategy*: Dual build systems for maximum
+compatibility
+
+'''''
+
+=== 10. Action Items
+
+[arabic]
+. *Documentation*: Update architecture-specific build guides
+. *Testing*: Expand CI coverage for emerging architectures
+. *Performance*: Investigate auto-vectorization improvements for
+Zen4{plus}
+. *Security*: Review secret generation entropy requirements
+
+'''''
+
+=== 11. Technical Questions Addressed
+
+[arabic]
+. *XXH3++_++128bits*: 128-bit variant with improved collision resistance
+. *Vectorization*: Manual SIMD implementation across multiple
+architectures
+. *Build System*: Dual Makefile/CMake with header-only mode
+. *Cross-Compilation*: Supported with known limitations
+. *Runtime Dispatcher*: x86/x64 exclusive feature for optimal
+instruction selection
+
+'''''
+
+=== 12. Conclusion
+
+The XXHash library demonstrates sophisticated engineering with: -
+High-performance hash algorithms optimized for modern hardware -
+Comprehensive cross-platform support - Flexible build system
+accommodating various use cases - Strong focus on both performance and
+portability
+
+The implementation successfully balances the competing demands of speed,
+compatibility, and maintainability across diverse computing
+environments.
+
+'''''
+
+=== 13. Project Integration and Build System
+
+==== 13.1 Repository Integration Strategy
+
+* *Official Repository*: https://github.com/Cyan4973/xxHash
+* *Integration Method*: Git submodule in `vendor/xxHash` directory
+* *Rationale*: Clean separation of third-party dependencies, easy
+updates, and clear project structure
+
+==== 13.2 Build System Architecture
+
+* *Primary Build System*: Meson (replacing CMake approach)
+* *Language Standard*: C99 (corrected from C89 mentioned in discussion)
+* *Build Configuration*: Static library compilation with custom wrapper
+code
+
+==== 13.3 Project Structure
+
+....
+xxhash-wrapper/
+├── vendor/
+│   └── xxHash/          # Git submodule with official source
+├── src/                 # C99 wrapper implementation
+├── include/             # Public header files
+├── meson.build          # Main Meson build configuration
+├── subprojects/         # Optional Meson subproject definitions
+└── .gitmodules          # Git submodule configuration
+....
+
+==== 13.4 Meson Integration Details
+
+* *Subproject Integration*: `subproject('xxHash')` for dependency
+management
+* *Wrapper Library*: Custom C99 wrapper around xxHash functionality
+* *Build Targets*: Static library compilation with C99 standard
+compliance
+* *Dependency Management*: Clear separation between vendor code and
+wrapper implementation
+
+==== 13.5 Integration Benefits
+
+* *Maintainability*: Easy updates to official xxHash source
+* *Build Clarity*: Clear distinction between vendor and project code
+* *Portability*: Meson’s cross-platform build capabilities
+* *Standards Compliance*: C99 standard for wrapper code ensures modern C
+features
+* *Flexibility*: Easy to swap out or update the underlying xxHash
+implementation
+
+==== 13.6 Implementation Considerations
+
+* *Wrapper Design*: C99-compliant wrapper functions around xxHash API
+* *Build Configuration*: Static linking of vendor xxHash with wrapper
+library
+* *Testing Strategy*: Integration testing of wrapper with official
+xxHash implementation
+* *Documentation*: Clear build instructions for Meson-based development
+
+This integration approach provides a robust, maintainable foundation for
+the xxHash wrapper project while leveraging the official source code and
+modern build system capabilities.
+
+'''''
+
+=== 14. Documentation Strategy and Organization
+
+==== 14.1 Simplified Documentation Structure
+
+For this simple wrapper project, a streamlined documentation approach
+was chosen:
+
+....
+docs/
+├── README.md                    # Main entry point
+├── api/                        # API documentation
+│   ├── overview.md
+│   ├── xxh3.md
+│   └── examples.md
+├── build/                      # Build instructions
+│   └── meson.md
+└── notes/                      # Meeting minutes and notes
+    ├── 2026-02-19-meeting.md   # Meeting minutes with date
+    ├── 2026-02-18-discussion.md # Discussion notes
+    └── changelog.md            # Project changelog
+....
+
+==== 14.2 File Naming Convention
+
+* *Meeting minutes and notes*: `YYYY-MM-DD-description.md`
+* *Examples*: Descriptive names like `basic-usage.md`, `streaming.md`
+* *API documentation*: Function-specific names like `xxh3.md`,
+`overview.md`
+
+==== 14.3 Documentation Focus Areas
+
+[arabic]
+. *Core API documentation* - What the wrapper provides
+. *Build instructions* - How to build the wrapper
+. *Quick examples* - Simple usage examples
+. *Meeting notes* - Keep track of decisions and discussions
+
+==== 14.4 Rationale for Simplification
+
+* *Maintainability*: Easier to keep documentation up-to-date
+* *Navigation*: Clear, logical structure for users
+* *Focus*: Emphasizes essential information for a wrapper project
+* *Efficiency*: Reduces documentation overhead while maintaining clarity
+
+This simplified approach provides the right balance of documentation for
+a wrapper project while maintaining clarity and ease of maintenance.
+
+'''''
+
+=== 15. Documentation Format and Structure Updates
+
+==== 15.1 Documentation Format Decision
+
+* *Primary Format*: AsciiDoc for all documentation files
+* *Exception*: Top-level README.md remains in Markdown format
+* *Rationale*: AsciiDoc provides better formatting capabilities for
+technical documentation while maintaining compatibility with GitHub
+rendering
+
+==== 15.2 Updated Documentation Structure
+
+....
+specs/
+├── index.adoc                   # Main documentation entry point (replaces docs/README.md)
+├── api/                        # API documentation
+│   ├── overview.adoc
+│   ├── xxh3.adoc
+│   └── examples.adoc
+├── build/                      # Build instructions
+│   └── meson.adoc
+└── notes/                      # Meeting minutes and notes
+    ├── 2026-02-19-meeting.adoc # Meeting minutes with date (AsciiDoc format)
+    ├── 2026-02-18-discussion.adoc # Discussion notes (AsciiDoc format)
+    └── changelog.adoc          # Project changelog (AsciiDoc format)
+....
+
+==== 15.3 File Naming Convention
+
+* *Meeting minutes and notes*: `YYYY-MM-DD-description.adoc` (AsciiDoc
+format)
+* *Examples*: Descriptive names like `basic-usage.adoc`,
+`streaming.adoc`
+* *API documentation*: Function-specific names like `xxh3.adoc`,
+`overview.adoc`
+
+==== 15.4 Benefits of AsciiDoc Format
+
+* *Rich Formatting*: Better support for tables, code blocks, and
+cross-references
+* *Consistency*: Uniform format across all documentation
+* *Maintainability*: Easier to maintain and update documentation
+* *Compatibility*: Works well with GitHub and other documentation
+platforms
+
+==== 15.5 Implementation Considerations
+
+* *Conversion*: Existing Markdown files need to be converted to AsciiDoc
+* *Tooling*: Ensure AsciiDoc tools are available in the development
+environment
+* *Documentation*: Update documentation to reflect AsciiDoc format
+requirements
+* *Examples*: Provide AsciiDoc formatting examples in documentation
+
+This documentation format update provides better formatting capabilities
+while maintaining the simplified structure that works well for a wrapper
+project.
