@@ -1,0 +1,30 @@
+# Build artifacts
+build/
+out/
+bin/
+obj/
+*.o
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+
+# Meson / Ninja
+.mesonpy-
+.meson-cache/
+meson-logs/
+meson-private/
+
+# Logs and env
+*.log
+.env*
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp
+.vscode/
+.idea/
+.cache/

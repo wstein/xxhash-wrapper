@@ -1,0 +1,6 @@
+#ifndef XXH3_WRAPPER_INTERNAL_UTILS_H
+#define XXH3_WRAPPER_INTERNAL_UTILS_H
+
+#define XXH3_WRAPPER_UNUSED(x) ((void)(x))
+
+#endif
