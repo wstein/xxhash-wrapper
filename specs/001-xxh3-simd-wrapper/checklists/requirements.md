@@ -13,7 +13,8 @@
 |------|---------|-----------|-----------|
 | **Streaming API** | Single-shot only | Both (+streaming) | Enable efficient streaming hash use cases |
 | **Platforms** | General (all x86) | x86/x64 + ARM | Explicit scope definition for MVP |
-| **CPU Dispatch** | Runtime preferred | x86 runtime, ARM compile-time | Aligns with vendor architecture |
+| **CPU Dispatch Strategy** | Vendor runtime dispatch | No internal dispatch; export all named variants | Simplicity; consumer controls selection |
+| **C99 standard** | Mentioned in meeting notes | Now explicit in FR-015 | Codified in spec |
 | **Secrets API** | Seed-only | Both seed + secrets | Full compatibility with vendor API |
 | **SIMD Targets** | SSE2, AVX2 | SSE2, AVX2, AVX512 | Performance consistency across HW |
 | **Build System** | CMake/Make | Meson | Project-specific requirement |
@@ -38,8 +39,8 @@
 
 - [x] Single-shot **and** streaming APIs defined (FR-001, FR-002)
 - [x] Secret-based variants included (FR-003, FR-004)
-- [x] x86/x64 runtime dispatch specified (FR-005)
-- [x] ARM compile-time dispatch specified (FR-006)
+- [x] x86/x64 variants always exported (scalar, SSE2, AVX2, AVX512) — no internal dispatch (FR-005)
+- [x] ARM aarch64 variants exported when compiled for aarch64 (NEON, SVE) (FR-006)
 - [x] Scalar fallback required (FR-007)
 - [x] Identical output guarantee across SIMD variants (FR-008)
 - [x] Input size flexibility (FR-009)
@@ -48,6 +49,7 @@
 - [x] Meson build system (FR-012)
 - [x] CPU feature override for testing (FR-013)
 - [x] Both dynamic + static linking (FR-014)
+- [x] C99 language standard for wrapper code (FR-015)
 
 ## Feature Readiness
 
@@ -63,12 +65,13 @@
 **Status**: ✅ **PASS** (all critical items verified; clarifications integrated; ready for planning)
 
 **Key improvements post-clarification**:
-- Streaming API clarified (both single-shot and state-based)
-- Platforms explicitly scoped (x86/x64 runtime, ARM compile-time)
+- Streaming API clarified (both single-shot and state-based, per-variant)
+- **No internal dispatch**: all SIMD variants exported as named symbols; consumer selects variant
+- Platforms explicitly scoped (x86/x64 all variants always exported; ARM exports when target supports)
 - Build system fixed (Meson, not CMake/Makefile)
 - Secrets API exposed (seed + custom secret variants)
 - AVX512 included in MVP (performance consistency)
-- Assumptions reformulated to reflect decisions
+- **C99** language standard explicit in FR-015
 
 **Ready for next phase**: Run `/speckit.plan` to generate implementation plan and research phase.
 
