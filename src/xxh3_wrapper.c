@@ -5,11 +5,18 @@
 
 #include "xxhash.h"
 
+/* Vendor prototypes (ensure thin delegates compile even if header marshalling
+ * alters internal symbol names). These mirror the vendor API and are only
+ * used as direct-delegate call targets. */
+extern void XXH3_generateSecret_fromSeed(void* secretBuffer, uint64_t seed);
+extern XXH64_hash_t XXH3_64bits_withSecretandSeed(const void* input, size_t length, const void* secret, size_t secretSize, XXH64_hash_t seed);
+extern XXH128_hash_t XXH3_128bits_withSecretandSeed(const void* input, size_t length, const void* secret, size_t secretSize, XXH64_hash_t seed);
+
 struct xxh3_state_t {
     XXH3_state_t* state;
 };
 
-static xxh3_128_t xxh3_convert_128(XXH128_hash_t value)
+static inline xxh3_128_t xxh3_convert_128(XXH128_hash_t value)
 {
     xxh3_128_t out;
     out.high = value.high64;
@@ -197,6 +204,27 @@ void xxh3_generateSecret(void* secretBuffer, size_t secretSize, uint64_t seed)
     }
 }
 
+/* Re-export vendor delegates (thin wrappers) */
+void xxh3_generateSecret_fromSeed(void* secretBuffer, uint64_t seed)
+{
+    /* delegate directly to vendor implementation */
+    XXH3_generateSecret_fromSeed(secretBuffer, seed);
+}
+
+uint64_t xxh3_64_withSecretandSeed(const void* input, size_t size,
+                                    const void* secret, size_t secretSize,
+                                    uint64_t seed)
+{
+    return XXH3_64bits_withSecretandSeed(input, size, secret, secretSize, seed);
+}
+
+xxh3_128_t xxh3_128_withSecretandSeed(const void* input, size_t size,
+                                       const void* secret, size_t secretSize,
+                                       uint64_t seed)
+{
+    return xxh3_convert_128(XXH3_128bits_withSecretandSeed(input, size, secret, secretSize, seed));
+} 
+
 /* ============================================
    State Cloning: Copy a hash state (FR-023)
    ============================================ */
@@ -285,4 +313,95 @@ uint64_t xxh64_digest(xxh3_state_t* state)
         return 0;
     }
     return XXH64_digest((XXH64_state_t*)state->state);
+}
+
+
+
+
+/* ============================================
+   XXH128 Comparison Utilities (Optional)
+   ============================================ */
+
+int xxh3_128_isEqual(xxh3_128_t h1, xxh3_128_t h2)
+{
+    XXH128_hash_t v1, v2;
+    v1.high64 = h1.high;
+    v1.low64 = h1.low;
+    v2.high64 = h2.high;
+    v2.low64 = h2.low;
+    return XXH128_isEqual(v1, v2);
+}
+
+int xxh3_128_cmp(const void* h128_1, const void* h128_2)
+{
+    return XXH128_cmp(h128_1, h128_2);
+}
+
+/* ============================================
+   XXH32 Canonical Representation (Optional)
+   ============================================ */
+
+void xxh32_canonicalFromHash(xxh32_canonical_t* dst, uint32_t hash)
+{
+    if (dst == NULL) {
+        return;
+    }
+    XXH32_canonicalFromHash((XXH32_canonical_t*)dst, hash);
+}
+
+uint32_t xxh32_hashFromCanonical(const xxh32_canonical_t* src)
+{
+    if (src == NULL) {
+        return 0;
+    }
+    return XXH32_hashFromCanonical((const XXH32_canonical_t*)src);
+}
+
+/* ============================================
+   XXH64 Canonical Representation (Optional)
+   ============================================ */
+
+void xxh64_canonicalFromHash(xxh64_canonical_t* dst, uint64_t hash)
+{
+    if (dst == NULL) {
+        return;
+    }
+    XXH64_canonicalFromHash((XXH64_canonical_t*)dst, hash);
+}
+
+uint64_t xxh64_hashFromCanonical(const xxh64_canonical_t* src)
+{
+    if (src == NULL) {
+        return 0;
+    }
+    return XXH64_hashFromCanonical((const XXH64_canonical_t*)src);
+}
+
+/* ============================================
+   XXH128 Canonical Representation (Optional)
+   ============================================ */
+
+void xxh128_canonicalFromHash(xxh128_canonical_t* dst, xxh3_128_t hash)
+{
+    XXH128_hash_t v;
+    if (dst == NULL) {
+        return;
+    }
+    /* map wrapper fields to vendor type */
+    v.low64 = hash.low;
+    v.high64 = hash.high;
+    XXH128_canonicalFromHash((XXH128_canonical_t*)dst, v);
+}
+
+xxh3_128_t xxh128_hashFromCanonical(const xxh128_canonical_t* src)
+{
+    xxh3_128_t out = {0, 0};
+    XXH128_hash_t v;
+    if (src == NULL) {
+        return out;
+    }
+    v = XXH128_hashFromCanonical((const XXH128_canonical_t*)src);
+    out.high = v.high64;
+    out.low  = v.low64;
+    return out;
 }

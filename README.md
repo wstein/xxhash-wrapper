@@ -53,11 +53,28 @@ The build no longer accepts a global `simd_backend` option. Each SIMD variant is
 - XXH3 single-shot variants: `xxh3_64_<variant>()`, `xxh3_128_<variant>()` — seeded (explicit seed parameter)
 - XXH3 unseeded single-shot variants: `xxh3_64_unseeded()`, `xxh3_128_unseeded()` — dispatches to platform's best variant with seed=0
 - XXH3 unseeded architecture-specific variants: `xxh3_64_<variant>_unseeded()`, `xxh3_128_<variant>_unseeded()` (sse2, avx2, avx512, neon, sve, scalar)
+- XXH3 advanced variants: `xxh3_64_withSecretandSeed()`, `xxh3_128_withSecretandSeed()` — delegate to vendor implementations (custom secret + seed)
 - Streaming API: `xxh3_64_reset/update/digest()`, `xxh3_128_reset/update/digest()` — seeded
 - Streaming unseeded API: `xxh3_64_reset_unseeded()`, `xxh3_128_reset_unseeded()` — unseeded streaming reset
 - State management: `xxh3_createState()`, `xxh3_copyState()` — deep copy for branching workflows (FR-023)
-- Secret API: `xxh3_64_withSecret()`, `xxh3_128_withSecret()`, `XXH3_generateSecret()`
+- Secret API: `xxh3_64_withSecret()`, `xxh3_128_withSecret()`, `xxh3_generateSecret()`, `xxh3_generateSecret_fromSeed()`
+- XXH128 Comparison: `xxh3_128_isEqual()`, `xxh3_128_cmp()` — compare 128-bit hash values
+- XXH32 Canonical Representation: `xxh32_canonicalFromHash()`, `xxh32_hashFromCanonical()` — big-endian serialization
+- XXH64 Canonical Representation: `xxh64_canonicalFromHash()`, `xxh64_hashFromCanonical()` — big-endian serialization
+- XXH128 Canonical Representation: `xxh128_canonicalFromHash()`, `xxh128_hashFromCanonical()` — big-endian serialization (high64 first, then low64)
 - Legacy/traditional scalar exports: `xxh32()`, `xxh64()`
+
+Example: serialize XXH128 to a 16-byte canonical buffer
+
+```c
+xxh3_128_t h = xxh3_128(data, len, seed);
+xxh128_canonical_t c;
+xxh128_canonicalFromHash(&c, h);
+/* c.digest now contains 16 bytes in big-endian order: high64 then low64 */
+
+/* Restore back to numeric form */
+xxh3_128_t restored = xxh128_hashFromCanonical(&c);
+```
 
 ## Platform-Specific Variant Availability (FR-005)
 
@@ -132,14 +149,3 @@ This library provides exported symbols per variant but does not do runtime CPU d
 ```sh
 ./build/bench_variants
 ```
-
-## What's NOT Exported
-
-This wrapper focuses on core XXH3 hashing and intentionally omits the following vendor functions, per the "simple wrapper" design philosophy:
-
-- **XXH3 with Secret AND Seed:** `XXH3_64bits_withSecretandSeed()`, `XXH3_128bits_withSecretandSeed()` — can be achieved by deriving a secret from seed and using `xxh3_64_withSecret()`
-- **Direct Seed-to-Secret:** `XXH3_generateSecret_fromSeed()` — use the general `xxh3_generateSecret()` instead
-- **XXH128 Comparison:** `XXH128_isEqual()`, `XXH128_cmp()` — use struct field comparison or `memcmp()` instead
-- **Canonical Representation:** `XXH32_canonicalFromHash()`, `XXH64_canonicalFromHash()`, etc. — implement in consumer code if needed
-
-Consumers needing any of these functions can implement them locally by calling the exported wrapper functions.

@@ -4,7 +4,7 @@
 #define XXH_INLINE_ALL
 #include "xxhash.h"
 
-static xxh3_128_t xxh3_convert_128_sse2(XXH128_hash_t value)
+static inline xxh3_128_t xxh3_convert_128_sse2(XXH128_hash_t value)
 {
     xxh3_128_t out;
     out.high = value.high64;

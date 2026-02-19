@@ -182,32 +182,34 @@ Users and CI verify that the library produces correct hashing output across all 
 - **Error Handling**: Contract-based (preconditions documented); calling a SIMD variant on a CPU that does not support the required instruction set is undefined behavior. The library header documents required CPU features per variant.
 - **Threading**: No mutable shared state; library is reentrant and thread-safe for concurrent read-only hashing.
 
-## Intentionally Omitted Vendor Functions
+## Optional Advanced Functions
 
-The wrapper provides comprehensive delegation to vendor xxHash. The following vendor functions are **available in xxHash but NOT exported** by the wrapper, with rationale:
+The wrapper additionally exports the following vendor functions to support specialized use cases. These functions are **available for consumers who need them**, but are **not required** for basic hashing workflows. Library consumers may choose to use these or omit them based on their needs.
 
-### XXH3 with Secret AND Seed (Combined)
-- `XXH3_64bits_withSecretandSeed()` / `XXH3_128bits_withSecretandSeed()`
-- **Rationale**: Rare use case. Consumers needing both can derive a secret from their seed via `xxh3_generateSecret()` and use `xxh3_64_withSecret()`. Omitting reduces API surface per the "simple wrapper" philosophy.
+### FR-025: Optional Advanced Function Support
 
-### Additional Secret Generation
-- `XXH3_generateSecret_fromSeed()` 
-- **Rationale**: Wrapper exports the general-case `xxh3_generateSecret()` which accepts custom seed bytes. Direct seed-to-secret conversion can be replicated by consumers creating a seed buffer and calling the general form.
+The wrapper exposes a small set of optional convenience helpers that are
+convenient for consumers but not required for core hashing workflows. The
+following optional functions are provided by the wrapper:
 
-### XXH128 Comparison Utilities
-- `XXH128_isEqual()` / `XXH128_cmp()`
-- **Rationale**: Consumers can compare 128-bit hash results via struct field comparison or standard `memcmp()`. These utilities are convenience functions; omitting them keeps the wrapper minimal.
+- **XXH3 with Secret AND Seed (Combined)**: `xxh3_64_withSecretandSeed()` / `xxh3_128_withSecretandSeed()`
+  - *Use case*: Consumers requiring both a custom secret and seed parameter.
+  - *Implementation*: Thin delegates to vendor `XXH3_*_withSecretandSeed()` implementations.
 
-### Canonical Representation (32 & 64-bit)
-- `XXH32_canonicalFromHash()` / `XXH32_hashFromCanonical()`
-- `XXH64_canonicalFromHash()` / `XXH64_hashFromCanonical()`
-- **Rationale**: Canonical form is for serializing hashes to big-endian byte buffers for network/storage. Not required for all consumers. Library provides the core hashing; consumers needing serial form can add it themselves.
+- **Secret Generation from Seed**: `xxh3_generateSecret_fromSeed()`
+  - *Use case*: Consumers needing to derive a 136-byte secret from a single seed value.
+  - *Implementation*: Wrapper delegates to vendor `XXH3_generateSecret_fromSeed()`.
 
-## Extensibility
+- **XXH128 Comparison Utilities**: `xxh3_128_isEqual()` / `xxh3_128_cmp()`
+  - *Use case*: Consumers comparing 128-bit hash results.
+  - *Implementation*: Type-safe wrappers for struct field comparison.
 
-Consumers needing any of the above functions can:
-1. Implement them locally by calling vendor functions or wrapper exports.
-2. Propose additions via issue/PR with use case justification.
-3. Bind directly to vendor xxHash library in parallel if needed.
+- **XXH32 Canonical Representation**: `xxh32_canonicalFromHash()` / `xxh32_hashFromCanonical()`
+  - *Use case*: Consumers needing big-endian serialization of 32-bit hashes.
+  - *Implementation*: Conversion between hash values and 4-byte canonical form.
 
-This design maintains the wrapper as a "simple delegation" layer while leaving room for consumer-driven extensions.
+- **XXH64 Canonical Representation**: `xxh64_canonicalFromHash()` / `xxh64_hashFromCanonical()`
+  - *Use case*: Consumers needing big-endian serialization of 64-bit hashes.
+  - *Implementation*: Conversion between hash values and 8-byte canonical form.
+
+All optional functions follow the same design principles as the core API: simple delegation to vendor functions or type-safe wrappers, with no custom cryptographic implementation.

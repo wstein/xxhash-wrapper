@@ -53,6 +53,18 @@ extern "C" {
 #  define XXH3_HAVE_SVE    0
 #endif
 
+/*!
+ * @brief The return value from 128-bit hashes.
+ *
+ * Stored in little endian order, although the fields themselves are in native
+ * endianness.
+ *
+ * Do NOT rely on raw memory copies of `XXH128_hash_t` for cross-platform or
+ * on-the-wire serialization. For a machine-independent (canonical)
+ * representation use `xxh128_canonicalFromHash()` and
+ * `xxh128_hashFromCanonical()` which produce/consume a fixed big-endian 16‑byte
+ * form.
+ */
 typedef struct {
     uint64_t high;
     uint64_t low;
@@ -148,6 +160,43 @@ uint32_t xxh32_digest(xxh3_state_t* state);
 void xxh64_reset(xxh3_state_t* state, uint64_t seed);
 int xxh64_update(xxh3_state_t* state, const void* input, size_t size);
 uint64_t xxh64_digest(xxh3_state_t* state);
+
+/* XXH3 Advanced: Secret AND Seed (delegates to vendor) */
+uint64_t xxh3_64_withSecretandSeed(const void* input, size_t size,
+                                   const void* secret, size_t secretSize,
+                                   uint64_t seed);
+xxh3_128_t xxh3_128_withSecretandSeed(const void* input, size_t size,
+                                      const void* secret, size_t secretSize,
+                                      uint64_t seed);
+
+/* XXH3 Secret Generation: Derive secret directly from seed (vendor delegate) */
+void xxh3_generateSecret_fromSeed(void* secretBuffer, uint64_t seed);
+
+/* XXH128 Comparison Utilities */
+int xxh3_128_isEqual(xxh3_128_t h1, xxh3_128_t h2);
+int xxh3_128_cmp(const void* h128_1, const void* h128_2);
+
+/* XXH32 Canonical Representation */
+typedef struct {
+    unsigned char digest[4];
+} xxh32_canonical_t;
+void xxh32_canonicalFromHash(xxh32_canonical_t* dst, uint32_t hash);
+uint32_t xxh32_hashFromCanonical(const xxh32_canonical_t* src);
+
+/* XXH64 Canonical Representation */
+typedef struct {
+    unsigned char digest[8];
+} xxh64_canonical_t;
+void xxh64_canonicalFromHash(xxh64_canonical_t* dst, uint64_t hash);
+uint64_t xxh64_hashFromCanonical(const xxh64_canonical_t* src);
+
+/* XXH128 Canonical Representation */
+
+typedef struct {
+    unsigned char digest[16];
+} xxh128_canonical_t;
+void xxh128_canonicalFromHash(xxh128_canonical_t* dst, xxh3_128_t hash);
+xxh3_128_t xxh128_hashFromCanonical(const xxh128_canonical_t* src);
 
 /*
  * CPU requirements for variant functions (consumer dispatch responsibility):

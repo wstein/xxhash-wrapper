@@ -21,12 +21,9 @@
  *   - Cross-algorithm independence: xxh32/xxh64/xxh3 outputs differ
  *   - Null/zero-state defensive return checks
  *
- * NOTE: Functions NOT exported (intentionally absent):
- *   - XXH3_64bits_withSecretandSeed() / XXH3_128bits_withSecretandSeed()
- *   - XXH3_generateSecret_fromSeed()
- *   - XXH128_isEqual() / XXH128_cmp()
- *   - Canonical representation (XXH32/64_canonicalFromHash, etc.)
- *   See README.md and spec.md "Intentionally Omitted" for rationale.
+ * NOTE: Previously omitted vendor helpers (comparison utilities, canonical
+ * representation, and other advanced helpers) have been added to the wrapper
+ * as optional exports. See README.md and specs for details.
  * =============================================================================
  */
 
@@ -544,6 +541,71 @@ static void test_generate_secret_produces_nonzero_output(void)
     TEST_ASSERT_FALSE(all_zero);
 }
 
+static void test_xxh3_generateSecret_fromSeed_matches_seeded(void)
+{
+    unsigned char secret1[192];
+    unsigned char secret2[192];
+    size_t i;
+    uint64_t seed = SEED2;
+
+    /* Deterministic: same seed produces identical secret */
+    xxh3_generateSecret_fromSeed(secret1, seed);
+    xxh3_generateSecret_fromSeed(secret2, seed);
+    for (i = 0; i < sizeof(secret1); ++i) {
+        TEST_ASSERT_EQUAL_UINT((unsigned long)secret1[i], (unsigned long)secret2[i]);
+    }
+
+    /* Non-zero output */
+    int all_zero = 1;
+    for (i = 0; i < sizeof(secret1); ++i) {
+        if (secret1[i] != 0) { all_zero = 0; break; }
+    }
+    TEST_ASSERT_FALSE(all_zero);
+}
+
+static void test_xxh3_withSecretandSeed_matches_seed_when_secret_from_seed(void)
+{
+    unsigned char secret[192];
+    const size_t size = 1024; /* large input: >= XXH3_MIDSIZE_MAX (240) */
+    unsigned char* buf = make_buf(size);
+    uint64_t seed = SEED2;
+
+    TEST_ASSERT_NOT_NULL(buf);
+    xxh3_generateSecret_fromSeed(secret, seed);
+
+    uint64_t seeded = xxh3_64(buf, size, seed);
+    uint64_t with_combined = xxh3_64_withSecretandSeed(buf, size, secret, sizeof(secret), seed);
+    TEST_ASSERT_EQUAL_UINT64(seeded, with_combined);
+
+    xxh3_128_t seeded128 = xxh3_128(buf, size, seed);
+    xxh3_128_t with_combined128 = xxh3_128_withSecretandSeed(buf, size, secret, sizeof(secret), seed);
+    TEST_ASSERT_EQUAL_UINT64(seeded128.high, with_combined128.high);
+    TEST_ASSERT_EQUAL_UINT64(seeded128.low,  with_combined128.low);
+
+    free(buf);
+}
+
+static void test_xxh3_withSecretandSeed_respects_both_secret_and_seed(void)
+{
+    unsigned char secret[XXH3_SECRET_SIZE_MIN];
+    size_t i;
+    const size_t size = 1024; /* large input so secret path is used */
+    unsigned char* buf = make_buf(size);
+    uint64_t seed = SEED2;
+
+    for (i = 0; i < sizeof(secret); ++i) secret[i] = (unsigned char)(i * 17 + 3);
+
+    uint64_t seeded = xxh3_64(buf, size, seed);
+    uint64_t combined = xxh3_64_withSecretandSeed(buf, size, secret, sizeof(secret), seed);
+    TEST_ASSERT_NOT_EQUAL(seeded, combined);
+
+    xxh3_128_t seeded128 = xxh3_128(buf, size, seed);
+    xxh3_128_t combined128 = xxh3_128_withSecretandSeed(buf, size, secret, sizeof(secret), seed);
+    TEST_ASSERT_TRUE(seeded128.high != combined128.high || seeded128.low != combined128.low);
+
+    free(buf);
+}
+
 /* ---------------------------------------------------------------- edge cases */
 
 static void test_xxh3_64_empty_input_is_stable(void)
@@ -715,6 +777,83 @@ static void test_xxh32_stream_reset_reuse(void)
     xxh3_freeState(state);
 }
 
+/* ---------------------------------------------------- Canonical representation tests */
+
+static void test_xxh32_canonical_roundtrip(void)
+{
+    const size_t size = strlen(SHORT_INPUT);
+    uint32_t h = xxh32(SHORT_INPUT, size, SEED32_1);
+    xxh32_canonical_t can;
+    unsigned char expected[4];
+
+    xxh32_canonicalFromHash(&can, h);
+
+    /* Round-trip numeric equality */
+    TEST_ASSERT_EQUAL_UINT32(h, xxh32_hashFromCanonical(&can));
+
+    /* Canonical form MUST be big-endian */
+    expected[0] = (unsigned char)((h >> 24) & 0xFFu);
+    expected[1] = (unsigned char)((h >> 16) & 0xFFu);
+    expected[2] = (unsigned char)((h >> 8)  & 0xFFu);
+    expected[3] = (unsigned char)(h & 0xFFu);
+    for (size_t i = 0; i < 4; ++i) {
+        TEST_ASSERT_EQUAL_UINT((unsigned long)expected[i], (unsigned long)can.digest[i]);
+    }
+}
+
+static void test_xxh64_canonical_roundtrip(void)
+{
+    const size_t size = strlen(SHORT_INPUT);
+    uint64_t h = xxh64(SHORT_INPUT, size, SEED2);
+    xxh64_canonical_t can;
+    unsigned char expected[8];
+
+    xxh64_canonicalFromHash(&can, h);
+
+    /* Round-trip numeric equality */
+    TEST_ASSERT_EQUAL_UINT64(h, xxh64_hashFromCanonical(&can));
+
+    /* Canonical form MUST be big-endian */
+    expected[0] = (unsigned char)((h >> 56) & 0xFFu);
+    expected[1] = (unsigned char)((h >> 48) & 0xFFu);
+    expected[2] = (unsigned char)((h >> 40) & 0xFFu);
+    expected[3] = (unsigned char)((h >> 32) & 0xFFu);
+    expected[4] = (unsigned char)((h >> 24) & 0xFFu);
+    expected[5] = (unsigned char)((h >> 16) & 0xFFu);
+    expected[6] = (unsigned char)((h >> 8)  & 0xFFu);
+    expected[7] = (unsigned char)(h & 0xFFu);
+    for (size_t i = 0; i < 8; ++i) {
+        TEST_ASSERT_EQUAL_UINT((unsigned long)expected[i], (unsigned long)can.digest[i]);
+    }
+}
+
+static void test_xxh128_canonical_roundtrip(void)
+{
+    const size_t size = strlen(LOREM);
+    xxh3_128_t h = xxh3_128_scalar(LOREM, size, SEED2);
+    xxh128_canonical_t can;
+    xxh3_128_t out;
+    unsigned char expected[16];
+    size_t i;
+
+    xxh128_canonicalFromHash(&can, h);
+    out = xxh128_hashFromCanonical(&can);
+
+    /* Round-trip numeric equality */
+    TEST_ASSERT_EQUAL_UINT64(h.high, out.high);
+    TEST_ASSERT_EQUAL_UINT64(h.low, out.low);
+
+    /* Canonical MUST be big-endian, with high64 first, then low64 */
+    for (i = 0; i < 8; ++i)
+        expected[i] = (unsigned char)((h.high >> ((7 - i) * 8)) & 0xFFu);
+    for (i = 0; i < 8; ++i)
+        expected[8 + i] = (unsigned char)((h.low >> ((7 - i) * 8)) & 0xFFu);
+
+    for (size_t i = 0; i < 16; ++i) {
+        TEST_ASSERT_EQUAL_UINT((unsigned long)expected[i], (unsigned long)can.digest[i]);
+    }
+}
+
 /* ------------------------------------------------------ xxh64 */
 
 static void test_xxh64_single_shot_stable(void)
@@ -870,6 +1009,9 @@ int main(void)
     RUN_TEST(test_xxh3_64_secret_stream_matches_single_shot);
     RUN_TEST(test_xxh3_128_with_secret_matches_stream);
     RUN_TEST(test_generate_secret_produces_nonzero_output);
+    RUN_TEST(test_xxh3_generateSecret_fromSeed_matches_seeded);
+    RUN_TEST(test_xxh3_withSecretandSeed_matches_seed_when_secret_from_seed);
+    RUN_TEST(test_xxh3_withSecretandSeed_respects_both_secret_and_seed);
 
     /* edge cases */
     RUN_TEST(test_xxh3_64_empty_input_is_stable);
@@ -903,6 +1045,11 @@ int main(void)
     RUN_TEST(test_xxh64_stream_matches_single_shot);
     RUN_TEST(test_xxh64_chunked_streaming_matches_single_shot);
     RUN_TEST(test_xxh64_stream_reset_reuse);
+
+    /* Canonical representation round-trip */
+    RUN_TEST(test_xxh32_canonical_roundtrip);
+    RUN_TEST(test_xxh64_canonical_roundtrip);
+    RUN_TEST(test_xxh128_canonical_roundtrip);
 
     /* cross-algorithm */
     RUN_TEST(test_xxh32_xxh64_outputs_differ_for_same_input);

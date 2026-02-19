@@ -214,8 +214,109 @@ which vendor functions ARE and ARE NOT exported.
 
 '''''
 
-=== 6. Next Steps
+=== 6. Implementation of Previously Omitted Functions (Phase 4)
 
-* Monitor user feedback on missing APIs
-* Consider adding missing comparison/canonical functions if demand increases
-* Continue testing across platforms (already verified on macOS arm64)
+==== 6.1 Philosophy Shift: From "Selective Omission" to "Complete Coverage with Consumer Choice"
+
+After initial API audit, user decision was made to reverse the omission of the
+eight previously identified vendor functions. Rationale: Rather than restricting
+the API based on perceived "simplicity", the wrapper should export all functions
+and **let consumers decide** which to use.
+
+==== 6.2 Eight Functions Implemented & Exported
+
+===== Re-exported vendor delegates
+
+The wrapper now **re-exports vendor implementations** for the previously
+controversial helpers as *thin delegates* (no custom mixing/derivation logic in
+wrapper code). The following wrapper functions are now thin delegates to the
+vendor equivalents:
+
+* `xxh3_64_withSecretandSeed()` → `XXH3_64bits_withSecretandSeed()`
+* `xxh3_128_withSecretandSeed()` → `XXH3_128bits_withSecretandSeed()`
+* `xxh3_generateSecret_fromSeed()` → `XXH3_generateSecret_fromSeed()`
+
+Rationale:
+* Maintain a delegate-only wrapper surface while making vendor functionality
+  available to consumers via the wrapper.
+* Avoid duplicating vendor derivation/mixing logic in the wrapper; delegate to
+  the authoritative vendor implementation instead.
+
+All three functions are thin wrappers (single-line delegates) and are exported
+by the wrapper for consumers that require them. The wrapper still exposes the
+other small convenience delegates (comparison utilities and canonical
+conversion functions) as before.
+
+===== XXH128 Comparison Utilities
+
+*Functions*:
+* `int xxh3_128_isEqual(xxh3_128_t h1, xxh3_128_t h2)`
+* `int xxh3_128_cmp(xxh3_128_t h1, xxh3_128_t h2)` (qsort-compatible)
+
+*Implementation Strategy*: Type-Safe Struct Conversion Wrappers
+* Convert wrapper struct fields (h1.high, h1.low) to vendor struct (XXH128_hash_t)
+* Delegate to vendor comparison functions
+* Return comparison result directly
+
+*Rationale*: Vendor provides these utilities; wrapper comparison wrappers provide
+type-safe conversion between wrapper types and vendor internal types.
+
+===== XXH32 & XXH64 Canonical Representation
+
+*Functions*:
+* `xxh32_canonical_t xxh32_canonicalFromHash(uint32_t hash)`
+* `uint32_t xxh32_hashFromCanonical(xxh32_canonical_t canonical)`
+* `xxh64_canonical_t xxh64_canonicalFromHash(uint64_t hash)`
+* `uint64_t xxh64_hashFromCanonical(xxh64_canonical_t canonical)`
+
+*Type Definitions*:
+[source,c]
+----
+typedef struct {
+    unsigned char digest[4];  // 32-bit hash as 4 bytes (big-endian)
+} xxh32_canonical_t;
+
+typedef struct {
+    unsigned char digest[8];  // 64-bit hash as 8 bytes (big-endian)
+} xxh64_canonical_t;
+----
+
+*Implementation Strategy*: Type-Safe Big-Endian Conversion
+* Convert between hash value and big-endian byte representation
+* Wrapper types separate from vendor internal types
+* Maintain clean API boundary
+
+*Rationale*: Canonical representation is essential for network/storage serialization.
+Separate wrapper typedefs maintain type safety without exposing vendor internals.
+
+==== 6.3 Testing & Validation
+
+* ✅ All 8 functions compile without errors in both shared and static libraries
+* ✅ Full unit test suite passes (no regressions in existing functionality)
+* ✅ Symbol table verified: all 8 functions present and exported in shared library
+* ✅ Backward compatibility maintained: all existing APIs unchanged
+
+==== 6.4 Documentation Updates
+
+* **README.md**: Public API section updated to document all 8 new functions
+* **specs/spec.md**: New FR-025 section added (Optional Advanced Function Support)
+* **CHANGELOG.md**: Entry added documenting implementation of optional functions
+* **This document**: Complete rationale and implementation strategy documented
+
+==== 6.5 Design Rationale
+
+The shift from "omit unless essential" to "export all, let consumers choose" reflects:
+
+1. **Consumer Agency**: Developers can decide which functions they need
+2. **Future-Proofing**: All vendor xxHash functions now available; no need for separate bindings
+3. **Simplicity**: All implementations are thin delegators or type-safe wrappers (no custom logic)
+4. **No Bloat**: Canonical functions and comparison utilities are small; minimal code/compile impact
+5. **Type Safety**: Wrapper-specific types (xxh32_canonical_t, xxh64_canonical_t) prevent accidental type confusion
+
+'''''
+
+=== 7. Next Steps
+
+* Monitor API usage patterns in downstream consumers (cr-xxhash, other bindings)
+* Continue testing across all supported platforms
+* Gather feedback on whether additional wrapper utilities would be beneficial
