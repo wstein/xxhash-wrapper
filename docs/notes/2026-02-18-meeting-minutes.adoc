@@ -243,13 +243,12 @@ updates, and clear project structure
 
 ==== 13.2 Build System Architecture
 
-* *Primary Build System*: Meson (replacing CMake approach)
+* *Primary Build System*: Meson (replacing CMake and Makefile approaches)
 * *Language Standard*: C99 (corrected from C89 mentioned in discussion)
 * *Build Configuration*: Static library compilation with custom wrapper
 code
 
 ==== 13.3 Project Structure
-
 ....
 xxhash-wrapper/
 ├── vendor/
@@ -304,26 +303,28 @@ For this simple wrapper project, a streamlined documentation approach
 was chosen:
 
 ....
-docs/
-├── README.md                    # Main entry point
+specs/
+├── index.adoc                   # Main documentation entry point (replaces docs/README.md)
 ├── api/                        # API documentation
-│   ├── overview.md
-│   ├── xxh3.md
-│   └── examples.md
+│   ├── overview.adoc
+│   ├── xxh3.adoc
+│   └── examples.adoc
 ├── build/                      # Build instructions
-│   └── meson.md
+│   └── meson.adoc
 └── notes/                      # Meeting minutes and notes
-    ├── 2026-02-19-meeting.md   # Meeting minutes with date
-    ├── 2026-02-18-discussion.md # Discussion notes
-    └── changelog.md            # Project changelog
+    ├── 2026-02-19-meeting.adoc # Meeting minutes with date (AsciiDoc format)
+    ├── 2026-02-18-discussion.adoc # Discussion notes (AsciiDoc format)
+    └── changelog.adoc          # Project changelog (AsciiDoc format)
 ....
 
 ==== 14.2 File Naming Convention
 
-* *Meeting minutes and notes*: `YYYY-MM-DD-description.md`
-* *Examples*: Descriptive names like `basic-usage.md`, `streaming.md`
-* *API documentation*: Function-specific names like `xxh3.md`,
-`overview.md`
+* *Meeting minutes and notes*: `YYYY-MM-DD-description.adoc` (AsciiDoc
+format)
+* *Examples*: Descriptive names like `basic-usage.adoc`,
+`streaming.adoc`
+* *API documentation*: Function-specific names like `xxh3.adoc`,
+`overview.adoc`
 
 ==== 14.3 Documentation Focus Areas
 
@@ -334,7 +335,6 @@ docs/
 . *Meeting notes* - Keep track of decisions and discussions
 
 ==== 14.4 Rationale for Simplification
-
 * *Maintainability*: Easier to keep documentation up-to-date
 * *Navigation*: Clear, logical structure for users
 * *Focus*: Emphasizes essential information for a wrapper project
@@ -402,3 +402,31 @@ requirements
 This documentation format update provides better formatting capabilities
 while maintaining the simplified structure that works well for a wrapper
 project.
+
+'''''
+
+=== 16. Build System Decision
+
+==== 16.1 Build System Choice
+
+* *Build System*: Meson is the exclusive build system for this project
+* *Rationale*: Meson provides better cross-platform support, cleaner
+configuration, and more modern build capabilities compared to traditional
+Makefile and CMake approaches
+* *Implementation*: All build processes will be handled through Meson
+configuration files
+* *Vendor Integration*: xxHash will be integrated as a Meson subproject
+
+==== 16.2 Build System Benefits
+
+* *Simplicity*: Single build system approach reduces complexity
+* *Modern Features*: Meson offers modern build features and better
+dependency management
+* *Cross-Platform*: Excellent cross-platform support with consistent
+behavior
+* *Performance*: Faster build times and better incremental builds
+* *Maintainability*: Cleaner configuration files and easier maintenance
+
+This build system decision ensures a streamlined development experience
+while maintaining compatibility with the xxHash library and supporting
+the project's requirements.
