@@ -241,6 +241,8 @@ for other architectures
 . *Wrapper Dispatch Strategy*: The wrapper exports *all SIMD variants as separate named functions*;
 no internal dispatch. Consumers implement CPU detection and variant selection themselves.
 . *Language Standard*: C99 (`-std=c99`) for all wrapper code; no C11 or compiler extensions.
+. *Versioning Strategy*: Numeric Quad (`MAJOR.MINOR.PATCH.WRAPPER_PATCH`). Matches vendor for
+the first 3 digits (currently `0.8.3`), fourth digit is for the wrapper itself (`0.8.3.0`).
 . *Header-Only Implementation*: Not used by wrapper (library-only mode; dynamic/static linking).
 . *Cross-Platform Strategy*: Meson build system; x86/x64 exports all SIMD variants
 unconditionally; ARM exports NEON/SVE only when compiled for aarch64.
