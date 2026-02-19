@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "xxhash.h"
+#include "xxh3_converters.h"
 
 /* Vendor prototypes (ensure thin delegates compile even if header marshalling
  * alters internal symbol names). These mirror the vendor API and are only
@@ -18,10 +19,7 @@ struct xxh3_state_t {
 
 static inline xxh3_128_t xxh3_convert_128(XXH128_hash_t value)
 {
-    xxh3_128_t out;
-    out.high = value.high64;
-    out.low = value.low64;
-    return out;
+    return xxh128_to_xxh3(value);
 }
 
 // xxh3_64_scalar and xxh3_128_scalar are now in src/variants/scalar.c
@@ -324,12 +322,7 @@ uint64_t xxh64_digest(xxh3_state_t* state)
 
 int xxh3_128_isEqual(xxh3_128_t h1, xxh3_128_t h2)
 {
-    XXH128_hash_t v1, v2;
-    v1.high64 = h1.high;
-    v1.low64 = h1.low;
-    v2.high64 = h2.high;
-    v2.low64 = h2.low;
-    return XXH128_isEqual(v1, v2);
+    return XXH128_isEqual(xxh3_to_xxh128(h1), xxh3_to_xxh128(h2));
 }
 
 int xxh3_128_cmp(const void* h128_1, const void* h128_2)
