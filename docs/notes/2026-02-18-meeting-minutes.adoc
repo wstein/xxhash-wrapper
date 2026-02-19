@@ -510,3 +510,30 @@ behavior
 This build system decision ensures a streamlined development experience
 while maintaining compatibility with the xxHash library and supporting
 the project's requirements.
+
+'''''
+
+=== 17. Versioning Strategy
+
+==== 17.1 Numeric Quad Scheme
+
+The wrapper follows a **Numeric Quad** versioning scheme: `MAJOR.MINOR.PATCH.WRAPPER_PATCH`.
+
+* **MAJOR.MINOR.PATCH**: These first three digits MUST strictly match the version of the
+vendored xxHash library (currently `0.8.3`).
+* **WRAPPER_PATCH**: The fourth digit is a sequential number for the wrapper project itself.
+This allows the wrapper to release mandatory fixes, documentation updates,
+or ABI-compatible improvements independently of the vendor version.
+
+==== 17.2 Example Release Scenarios
+
+* **Vendor Release**: Upgrading to a new vendor version (e.g., `0.8.4`) will reset the wrapper
+patch to `0`. The release version would be `0.8.4.0`.
+* **Wrapper Fix**: A bug fix in the wrapper code for a vendor's `0.8.3` release would increment
+the fourth digit: `0.8.3.1`, `0.8.3.2`, etc.
+
+==== 17.3 Rationale
+
+This scheme provides a clear link to the underlying algorithm version while
+providing the flexibility to maintain the wrapper's quality and stability
+independently.
