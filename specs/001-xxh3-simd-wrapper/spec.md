@@ -108,6 +108,9 @@ Users and CI verify that the library produces correct hashing output across all 
 - **FR-015**: All wrapper source code (`src/`, `include/`) MUST conform to the **C99 language standard** (`-std=c99`). No C11 or compiler-specific extensions (GNU/Clang) are permitted in wrapper code. The vendored xxHash library is compiled as upstream provides it (also C99-compatible).
 - **FR-016**: Library MUST export **legacy and traditional scalar-only** hash functions: `uint32_t xxh32(const void* input, size_t size, uint32_t seed)` (legacy, 32-bit output) and `uint64_t xxh64(const void* input, size_t size, uint64_t seed)` (traditional, 64-bit output). These have **no SIMD variants** and **no variant suffix** in their symbol name. Both functions are always exported on all platforms. `xxh64()` is recommended as a high-performance scalar alternative when SIMD is not available, as it may outperform `xxh3_64_scalar()` on CPUs without SIMD acceleration.
 - **FR-017**: Library MUST follow a **four-digit (Numeric Quad) versioning scheme**: `MAJOR.MINOR.PATCH.WRAPPER_PATCH`. The first three digits MUST match the version of the vendored xxHash library (e.g., `0.8.3`). The fourth digit is reserved for the wrapper project's own patches or ABI-compatible fixes (e.g., `0.8.3.0`, `0.8.3.1`).
+- **FR-018**: Library MUST use **GitLab Flow with Release Branches**. The default primary branch is `main`. Long-lived release branches MUST be created for specific vendor versions (e.g., `v0.8.3.x`).
+- **FR-019**: Library MUST adhere to **Inclusive Naming standards** ([inclusivenaming.org](https://inclusivenaming.org/)) for all wrapper-contributed code (`src/`, `include/`), documentation, and build scripts. Vendored source code (`vendor/`) is excluded from this requirement to ensure clean upstream updates.
+- **FR-020**: All commits MUST follow the **Conventional Commits** specification (v1.0.0).
 
 ### Key Entities
 
@@ -156,6 +159,8 @@ Users and CI verify that the library produces correct hashing output across all 
 - Q: Language standard for all wrapper source code? → A: **C99 (`-std=c99`)** — no C11 or compiler extensions in `src/` or `include/`.
 - Q: How is the wrapper versioned? → A: **Numeric Quad (`MAJOR.MINOR.PATCH.WRAPPER_PATCH`)**. Major/Minor/Patch must match the vendored xxHash version. The fourth digit is for the wrapper itself (e.g., `0.8.3.0`).
 - Q: Which hash algorithms are exported, and with what variant structure? → A: **XXH3-64 and XXH3-128 with scalar + SIMD variants** (named `xxh3_64_<variant>`, `xxh3_128_<variant>`); plus **xxh32 (legacy)** and **xxh64 (traditional)** as scalar-only flat functions with no variant suffix. `xxh64()` is recommended as the scalar fallback when no SIMD is available.
+- Q: Scope of inclusive naming standards? → A: **Wrapper Only** — Applies to `src/`, `include/`, docs, and build scripts; excludes `vendor/` source to avoid patching overhead.
+- Q: Which branching strategy is used? → A: **GitLab Flow with Release Branches** (using `main`, not `master`).
 
 ## Assumptions
 
