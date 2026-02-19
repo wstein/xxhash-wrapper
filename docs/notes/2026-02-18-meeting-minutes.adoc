@@ -243,6 +243,8 @@ no internal dispatch. Consumers implement CPU detection and variant selection th
 . *Language Standard*: C99 (`-std=c99`) for all wrapper code; no C11 or compiler extensions.
 . *Versioning Strategy*: Numeric Quad (`MAJOR.MINOR.PATCH.WRAPPER_PATCH`). Matches vendor for
 the first 3 digits (currently `0.8.3`), fourth digit is for the wrapper itself (`0.8.3.0`).
+. *Commit & Git Workflow*: Use **Conventional Commits** for clear history and automation.
+. *Branching Strategy*: Final decision pending (proposals: GitHub Flow, GitLab Flow, Trunk-Based).
 . *Header-Only Implementation*: Not used by wrapper (library-only mode; dynamic/static linking).
 . *Cross-Platform Strategy*: Meson build system; x86/x64 exports all SIMD variants
 unconditionally; ARM exports NEON/SVE only when compiled for aarch64.
@@ -257,6 +259,8 @@ unconditionally; ARM exports NEON/SVE only when compiled for aarch64.
 . *Performance*: Investigate auto-vectorization improvements for
 Zen4{plus}
 . *Security*: Review secret generation entropy requirements
+. *Workflow*: Finalize and document the branching strategy selection.
+. *Linting*: Implement `commitlint` for Conventional Commit enforcement.
 
 '''''
 
@@ -537,3 +541,68 @@ the fourth digit: `0.8.3.1`, `0.8.3.2`, etc.
 This scheme provides a clear link to the underlying algorithm version while
 providing the flexibility to maintain the wrapper's quality and stability
 independently.
+
+'''''
+
+=== 18. Commit Message Standard: Conventional Commits
+
+==== 18.1 Overview
+The project adopts **Conventional Commits** (v1.0.0) for all changes. This provides a clear,
+structured history and enables automatic changelog generation and versioning.
+
+==== 18.2 Format
+Commits must follow the specified structure:
+----
+<type>[optional scope]: <description>
+
+[optional body]
+
+[optional footer(s)]
+----
+
+==== 18.3 Supported Types
+* **feat**: New functionality (e.g., AVX512 implementation).
+* **fix**: Bug fix (e.g., incorrect CPUID bit check).
+* **docs**: Documentation-only changes.
+* **perf**: Performance optimizations.
+* **refactor**: Code change that neither fixes bugs nor adds features.
+* **test**: Adding or correcting tests.
+* **chore**: Build system updates, dependencies, etc.
+
+==== 18.4 Benefits
+* **Better logs**: Easy to scan for functional changes vs maintenance.
+* **Tooling**: Enables `standard-version` or `release-it` to manage Numeric Quad increments.
+* **CI/CD**: Allows triggers to differentiate between documentation fixes and binary logic.
+
+'''''
+
+=== 19. Git Branching Strategy Proposals
+
+The following strategies (based on AB Tasty's review) were evaluated for the wrapper's needs:
+
+==== 19.1 Proposal A: GitHub Flow
+* **How**: Single `main` branch. Short-lived feature branches merged via Pull Request.
+* **Rating**: ⭐⭐⭐⭐
+* **Pros**: Simple, fast, native to GitHub. Good for a small team starting out.
+* **Cons**: No native way to maintain "Older Vendor Versions" if we need fixes for `0.8.2` while `0.8.3` is current.
+
+==== 19.2 Proposal B: GitLab Flow (Release Branches)
+* **How**: `main` is production code. Create `0.8.3.x` branches for stable releases corresponding to vendor versions.
+* **Rating**: ⭐⭐⭐⭐⭐ (RECOMMENDED)
+* **Pros**: Best fit for our **Numeric Quad scheme**. We can have simultaneous support for different vendor versions via long-lived release branches.
+* **Cons**: Slightly higher management overhead than pure GitHub Flow.
+
+==== 19.3 Proposal C: GitFlow
+* **How**: `main` (production), `develop` (staging), `feature/*`, `release/*`, `hotfix/*`.
+* **Rating**: ⭐⭐
+* **Pros**: Extremely rigid and historical.
+* **Cons**: Overkill for a wrapper. High complexity/noise for a small team.
+
+==== 19.4 Proposal D: Trunk-Based Development
+* **How**: All devs commit directly to a single branch (or via PR every few hours).
+* **Rating**: ⭐⭐⭐
+* **Pros**: Maximum speed, avoids merge hell.
+* **Cons**: Risks breaking dependent shards (like `cr-xxhash`) if a bad commit hits main before the CI gate completes fully.
+
+==== 19.5 Recommendation
+The technical lead recommends **GitLab Flow with Release Branches**. Since our project version is tied to the vendor version (xxHash 0.8.3), having a `v0.8.3.x` branch allows us to maintain the wrapper for that specific version while we start work on `v0.8.4.x` in `main`.
