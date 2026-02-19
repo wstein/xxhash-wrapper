@@ -30,6 +30,18 @@ build:linux:
     paths:
       - build/
 
+# Build variant: globally define XXH_INLINE_ALL to catch include-order / inline
+# mismatches between translation units (helps detect the kind of bug fixed in
+# src/xxh3_converters.h where header-order caused incompatible typedefs).
+build:inline:
+  stage: build
+  script:
+    - meson setup build-inline -Dc_args=-DXXH_INLINE_ALL
+    - meson compile -C build-inline
+  artifacts:
+    paths:
+      - build-inline/
+
 build:matrix:
   stage: build
   parallel:
@@ -50,6 +62,14 @@ test:unit:
   needs: ["build:linux"]
   script:
     - meson test -C build --print-errorlogs
+
+# Run unit tests against the build that enabled XXH_INLINE_ALL to catch
+# include-order / inline mismatches early.
+test:inline:
+  stage: test
+  needs: ["build:inline"]
+  script:
+    - meson test -C build-inline --print-errorlogs
 
 test:abi:
   stage: test
