@@ -17,11 +17,11 @@
 
 **Purpose**: Project initialization and basic structure
 
-- [ ] T001 Initialize Meson project structure in `meson.build`
-- [ ] T002 [P] Configure `vendor/xxHash` integration in `meson.build`
-- [ ] T003 [P] Create public header `include/xxh3.h` with basic types and versioning (C99)
-- [ ] T004 Create `src/common/internal_utils.h` for shared macros and SIMD helpers
-- [ ] T005 Implement `MAJOR.MINOR.PATCH.WRAPPER_PATCH` versioning logic in `meson.build`
+- [x] T001 Initialize Meson project structure in `meson.build`
+- [x] T002 [P] Configure `vendor/xxHash` integration in `meson.build`
+- [x] T003 [P] Create public header `include/xxh3.h` with basic types and versioning (C99)
+- [x] T004 Create `src/common/internal_utils.h` for shared macros and SIMD helpers
+- [x] T005 Implement `MAJOR.MINOR.PATCH.WRAPPER_PATCH` versioning logic in `meson.build`
 - [ ] T028 Set up GitLab Flow branching and protection rules (FR-018) in repository configuration
 
 ---
@@ -32,10 +32,10 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T006 Create `src/xxh3_wrapper.c` and implement scalar fallback functions (`xxh3_64_scalar`, `xxh3_128_scalar`)
-- [ ] T007 [P] Implement legacy `xxh32` and traditional `xxh64` exports in `src/xxh3_wrapper.c`
-- [ ] T008 Define opaque `xxh3_state_t` in `include/xxh3.h` and implement `xxh3_createState`/`xxh3_freeState` in `src/xxh3_wrapper.c`
-- [ ] T009 Configure CI job matrix for SIMD/platform tests (x86_64, aarch64, macOS) and enforce C99 compliance via `-std=c99` in `.gitlab-ci.yml`
+- [x] T006 Create `src/xxh3_wrapper.c` and implement scalar fallback functions (`xxh3_64_scalar`, `xxh3_128_scalar`)
+- [x] T007 [P] Implement legacy `xxh32` and traditional `xxh64` exports in `src/xxh3_wrapper.c`
+- [x] T008 Define opaque `xxh3_state_t` in `include/xxh3.h` and implement `xxh3_createState`/`xxh3_freeState` in `src/xxh3_wrapper.c`
+- [x] T009 Configure CI job matrix for SIMD/platform tests (x86_64, aarch64, macOS) and enforce C99 compliance via `-std=c99` in `.gitlab-ci.yml`
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -49,13 +49,13 @@
 
 ### Implementation for User Story 1
 
-- [ ] T010 [P] [US1] Implement SSE2 variant wrapper in `src/variants/x86/sse2.c`
-- [ ] T011 [P] [US1] Implement AVX2 variant wrapper in `src/variants/x86/avx2.c`
-- [ ] T012 [P] [US1] Implement AVX512 variant wrapper in `src/variants/x86/avx512.c`
-- [ ] T013 [P] [US1] Implement NEON variant wrapper in `src/variants/arm/neon.c`
-- [ ] T014 [P] [US1] Implement SVE variant wrapper in `src/variants/arm/sve.c`
-- [ ] T015 [US1] Implement 64-bit and 128-bit streaming `reset`, `update`, and `digest` for all variants in `src/xxh3_wrapper.c`
-- [ ] T016 [US1] Implement secret-based variants (`xxh3_*_withSecret`) and `XXH3_generateSecret` in `src/xxh3_wrapper.c`
+- [x] T010 [P] [US1] Implement SSE2 variant wrapper in `src/variants/x86/sse2.c`
+- [x] T011 [P] [US1] Implement AVX2 variant wrapper in `src/variants/x86/avx2.c`
+- [x] T012 [P] [US1] Implement AVX512 variant wrapper in `src/variants/x86/avx512.c`
+- [x] T013 [P] [US1] Implement NEON variant wrapper in `src/variants/arm/neon.c`
+- [x] T014 [P] [US1] Implement SVE variant wrapper in `src/variants/arm/sve.c`
+- [x] T015 [US1] Implement 64-bit and 128-bit streaming `reset`, `update`, and `digest` for all variants in `src/xxh3_wrapper.c`
+- [x] T016 [US1] Implement secret-based variants (`xxh3_*_withSecret`) and `XXH3_generateSecret` in `src/xxh3_wrapper.c`
 
 ---
 
@@ -67,10 +67,13 @@
 
 ### Tests for User Story 3
 
-- [ ] T017 [P] [US3] Create unit test suite in `tests/unit/test_variants.c` comparing all variants against scalar
-- [ ] T018 [P] [US3] Implement fuzz testing harness in `tests/fuzz/fuzz_xxh3.c` using libFuzzer
-- [ ] T019 [US3] Add automated ABI/regression checks script in `scripts/check-abi.sh`
-- [ ] T020 [US3] Integrate microbenchmark harness in `tests/bench/bench_variants.c` to verify SC-004
+- [x] T017 [P] [US3] Create unit test suite in `tests/unit/test_variants.c` comparing all variants against scalar
+- [x] T018 [P] [US3] Implement fuzz testing harness in `tests/fuzz/fuzz_xxh3.c` using libFuzzer
+- [x] T019 [US3] Add automated ABI/regression checks script in `scripts/check-abi.sh`
+- [x] T020 [US3] Integrate microbenchmark harness in `tests/bench/bench_variants.c` to verify SC-004
+- [ ] T029 [P] [US3] Add Unity test framework integration in `meson.build` with `meson.add_test_setup()`
+- [ ] T030 [P] [US3] Migrate `tests/unit/test_variants.c` to use Unity test macros for better assertions
+- [ ] T031 [US3] Add Unity test configuration file `unity.config` for test grouping and reporting
 
 ---
 
@@ -82,8 +85,8 @@
 
 ### Implementation for User Story 2
 
-- [ ] T021 [US2] Implement CPU feature override for testing (`XXH3_FORCE_SCALAR=1`) in `src/xxh3_wrapper.c`
-- [ ] T022 [US2] Document required CPU features per variant in `include/xxh3.h` for consumer dispatch guidance
+- [x] T021 [US2] Implement CPU feature override for testing (`XXH3_FORCE_SCALAR=1`) in `src/xxh3_wrapper.c`
+- [x] T022 [US2] Document required CPU features per variant in `include/xxh3.h` for consumer dispatch guidance
 
 ---
 
@@ -93,9 +96,9 @@
 
 - [ ] T023 Finalize Inclusive Naming across all files in `src/` and `include/`
 - [ ] T024 [P] Verify reproducible build checksums across Linux and macOS environments
-- [ ] T025 Update `README.md` with usage examples and FFI integration guide
-- [ ] T026 [P] Ensure all commits follow Conventional Commits specification
-- [ ] T027 Verify integration with cr-xxhash shard (SC-007)
+- [x] T025 Update `README.md` with usage examples and FFI integration guide
+- [x] T026 [P] Ensure all commits follow Conventional Commits specification
+- [x] T027 Verify integration with cr-xxhash shard (SC-007)
 
 ## Implementation Strategy
 

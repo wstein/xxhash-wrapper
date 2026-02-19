@@ -110,6 +110,7 @@ Users and CI verify that the library produces correct hashing output across all 
 - **FR-017**: Library MUST use **GitLab Flow with Release Branches**. The default primary branch is `main`. Long-lived release branches MUST be created for specific vendor versions (e.g., `v0.8.3.x`).
 - **FR-018**: Library MUST adhere to **Inclusive Naming standards** ([inclusivenaming.org](https://inclusivenaming.org/)) for all wrapper-contributed code (`src/`, `include/`), documentation, and build scripts. Vendored source code (`vendor/`) is excluded from this requirement to ensure clean upstream updates.
 - **FR-019**: All commits MUST follow the **Conventional Commits** specification (v1.0.0).
+- **FR-020**: Library MUST use **Unity** testing framework for unit tests. Integration with Meson via `meson.add_test_setup()` for test discovery and execution. Fuzz testing continues to use libFuzzer. Benchmarking uses manual harness in `tests/bench/`.
 
 ### Key Entities
 
