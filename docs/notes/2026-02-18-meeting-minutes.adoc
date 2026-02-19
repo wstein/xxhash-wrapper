@@ -248,6 +248,7 @@ the first 3 digits (currently `0.8.3`), fourth digit is for the wrapper itself (
 . *Header-Only Implementation*: Not used by wrapper (library-only mode; dynamic/static linking).
 . *Cross-Platform Strategy*: Meson build system; x86/x64 exports all SIMD variants
 unconditionally; ARM exports NEON/SVE only when compiled for aarch64.
+. *Secret Wiping Strategy*: **No Wiping**; clearing secret material from memory is the responsibility of the caller to maximize performance and minimize complexity.
 
 '''''
 
@@ -274,6 +275,7 @@ architectures
 . *Multi-Variant Export*: Wrapper exports all SIMD variants as named symbols; no internal dispatch
 . *Cross-Compilation*: Supported with known limitations
 . *No Dispatcher in Wrapper*: x86/x64 dispatch is consumer-side (CPUID + XGETBV)
+. *Secret Wiping*: No internal wiping of secret material (caller's responsibility).
 
 '''''
 

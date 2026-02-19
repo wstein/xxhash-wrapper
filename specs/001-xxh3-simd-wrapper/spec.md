@@ -161,6 +161,7 @@ Users and CI verify that the library produces correct hashing output across all 
 - Q: Which hash algorithms are exported, and with what variant structure? → A: **XXH3-64 and XXH3-128 with scalar + SIMD variants** (named `xxh3_64_<variant>`, `xxh3_128_<variant>`); plus **xxh32 (legacy)** and **xxh64 (traditional)** as scalar-only flat functions with no variant suffix. `xxh64()` is recommended as the scalar fallback when no SIMD is available.
 - Q: Scope of inclusive naming standards? → A: **Wrapper Only** — Applies to `src/`, `include/`, docs, and build scripts; excludes `vendor/` source to avoid patching overhead.
 - Q: Which branching strategy is used? → A: **GitLab Flow with Release Branches** (using `main`, not `master`).
+- Q: Should the library wipe secrets from memory after use? → A: **No Wiping** — Memory zeroing of secrets is the responsibility of the caller for maximal performance.
 
 ## Assumptions
 
