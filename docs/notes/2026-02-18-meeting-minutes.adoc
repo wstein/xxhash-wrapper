@@ -1221,3 +1221,48 @@ $ meson test -C build-test
 * ✅ Unit tests added and passing
 * ✅ Specification updated
 * ✅ Ready for integration
+
+'''''
+
+=== 26. Release: Version 0.8.3.0 (February 20, 2026)
+
+==== 26.1 Release Summary
+
+**Initial wrapper release** tracking xxHash **0.8.3**.
+
+**Key Highlights:**
+* Multi-variant SIMD exports: scalar, SSE2, AVX2, AVX512 (x86-64), NEON, SVE (ARM)
+* Complete XXH3, XXH32, and XXH64 streaming APIs
+* Unseeded variants support for all functions
+* GitHub Actions CI (replacing GitLab) with comprehensive build/test matrix
+* Defensive NULL-pointer guards on all API functions
+* C99 strict compliance with POSIX feature-test macros
+* Full test coverage with signal guards for heterogeneous CI runners
+
+==== 26.2 Release Process (GitLab Flow + GitHub Releases)
+
+1. **Consolidate Changelog**: merged [Unreleased] and [0.8.3.0] sections
+2. **Tag Release**: created annotated git tag `0.8.3.0`
+3. **Push to GitHub**: committed and pushed release commit and tag
+4. **Create GitHub Release**: published release notes on https://github.com/wstein/xxhash-wrapper/releases/tag/0.8.3.0
+5. **Branching Strategy**: tags on `main` branch; release branch `v0.8.3.x` created on-demand for patch releases
+
+==== 26.3 Release Contents
+
+*Fixes Addressed in This Release:*
+* CI artifact permissions: restored +x on binaries downloaded via `actions/upload-artifact@v4`
+* C99 compatibility: added `_XOPEN_SOURCE 700` to test sources and `scripts/check-test-feature-macros.sh` lint
+* SIGILL prevention: wrapped AVX2/AVX512 tests in `TEST_TRY_VARIANT()` signal guards
+* Guard macros: made `XXH3_WRAPPER_GUARD` variadic for safe compound-literal usage
+
+*New Features:*
+* GitHub Actions continuous integration workflow
+* Compound-literal refactoring for zero-initialization
+* Parameter validation guards in debug builds
+* Fuzz target support via `-Dfuzz=true` meson option
+
+==== 26.4 Versioning & Future Releases
+
+* **Numeric Quad**: `MAJOR.MINOR.PATCH.WRAPPER_PATCH` (0.8.3.0)
+* **Next patch release**: `0.8.3.1` will branch from `v0.8.3.x` for maintenance
+* **Next xxHash upgrade**: next wrapper release will track new xxHash version (e.g., 0.8.4 → wrapper 0.8.4.0)

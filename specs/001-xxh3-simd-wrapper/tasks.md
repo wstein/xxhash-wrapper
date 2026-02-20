@@ -243,3 +243,35 @@
 ✅ **Production Safe**: No runtime dispatch logic, no undefined behavior
 
 **Ready for release to cr-xxhash and downstream consumers.**
+
+---
+
+## Phase 7: Release & Publication (February 20, 2026)
+
+### Release 0.8.3.0 - Initial Wrapper Release
+
+**Release Tasks:**
+- [x] Consolidate CHANGELOG: merge [Unreleased] and [0.8.3.0] sections
+- [x] Update version links: change CHANGELOG references from GitLab to GitHub
+- [x] Create git tag: annotated tag `0.8.3.0` from `main` commit `cc3dc75`
+- [x] Push to GitHub: commit and tag pushed to `origin/main`
+- [x] Create GitHub Release: published release notes to https://github.com/wstein/xxhash-wrapper/releases/tag/0.8.3.0
+- [x] Update meeting minutes: document release process and versioning strategy in section 26
+- [x] Branching strategy: tags on `main` branch; `v0.8.3.x` release branch created on-demand for patches
+
+**Release Artifacts:**
+- Binary downloads: GitHub automatically generates source archives (.zip, .tar.gz)
+- Git tag: `0.8.3.0` (annotated, points to `cc3dc75`)
+- Release Notes: comprehensive summary of features, fixes, and supported platforms
+- Documentation: platformspecific build/export examples in PLATFORM_VERIFICATION.md
+
+**Post-Release Readiness:**
+- [x] Version frozen at 0.8.3.0 in code (`include/xxh3.h`, `meson.build`)
+- [x] Unreleased section cleared for future development
+- [x] CI pipeline passes all checks on released commit
+
+**Future Release Strategy:**
+- Next patch: `v0.8.3.x` branch for 0.8.3.1, 0.8.3.2, etc.
+- Next feature: tag from `main` when xxHash version bumps to 0.8.4 or new features added
+- Semantic versioning: MAJOR.MINOR.PATCH.WRAPPER_PATCH follows xxHash versioning
+
