@@ -7,6 +7,7 @@ project(
     'c_std=c99',
     'warning_level=2',
     'buildtype=release',  # Default to release for performance
+    'b_ndebug=if-release', # Define NDEBUG for release/minsize builds; omit for debug
   ],
 )
 

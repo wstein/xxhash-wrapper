@@ -12,6 +12,13 @@ xxHash version.
 ## [Unreleased]
 
 ### Added
+- Debug-only parameter validation guards (`#ifndef NDEBUG` blocks) on all wrapper
+  delegate functions in `src/xxh3_wrapper.c` and all per-variant single-shot functions
+  in `src/variants/*.c`. Guards check for NULL state/input pointers and return safe
+  defaults rather than triggering undefined behaviour. In release builds
+  (`buildtype=release`, where meson adds `-DNDEBUG`), all guards compile to nothing.
+  `XXH3_DEBUG_ASSERT(expr)` macro added to `src/common/internal_utils.h` for future
+  assert-style guards.
 - Unseeded single-shot and streaming variants for all XXH3 *per-variant* symbols (e.g. `xxh3_64_scalar_unseeded()`, `xxh3_64_avx2_unseeded()`, `xxh3_128_neon_unseeded()`), `xxh3_64_reset_unseeded()`, `xxh3_128_reset_unseeded()`, plus all architecture-specific variants (sse2, avx2, avx512, neon, sve, scalar)
 - `XXH3_WRAPPER_VERSION_STRING` compile-time version string macro in `xxh3.h`
 - `XXH3_SECRET_SIZE_MIN` constant and `XXH3_ASSERT_SECRET_SIZE()` compile-time guard macro

@@ -181,6 +181,8 @@ Example link args:
    - `xxh3_*_neon`: requires AArch64 NEON (baseline for ARM; safe to assume present on aarch64 builds)
    - `xxh3_*_sve`: requires AArch64 SVE (check at runtime; not all ARM CPUs support SVE)
 
+**Debug vs release guard behaviour:** All NULL-pointer and invalid-input guards in the wrapper and variant functions are compiled with `#ifndef NDEBUG` and are **active only in debug builds** (`meson setup -Dbuildtype=debug`). Release builds (the default; `buildtype=release`) have `-DNDEBUG` set by meson, which strips all guards completely. Callers must therefore guarantee valid inputs in release builds — passing a NULL pointer or mismatched state produces undefined behaviour.
+
 This library provides exported symbols per variant but does not do runtime CPU dispatch. Select the appropriate symbol in your consumer. For quick local comparisons, use the provided benchmark:
 
 ```sh

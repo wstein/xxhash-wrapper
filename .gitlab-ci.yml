@@ -42,6 +42,18 @@ build:inline:
     paths:
       - build-inline/
 
+# Debug build: meson buildtype=debug does NOT define NDEBUG, so all
+# #ifndef NDEBUG parameter-validation guards are active. This catches
+# regressions in the guard code itself and validates guard branch coverage.
+build:debug:
+  stage: build
+  script:
+    - meson setup build-debug -Dbuildtype=debug
+    - meson compile -C build-debug
+  artifacts:
+    paths:
+      - build-debug/
+
 build:matrix:
   stage: build
   parallel:
@@ -70,6 +82,13 @@ test:inline:
   needs: ["build:inline"]
   script:
     - meson test -C build-inline --print-errorlogs
+
+# Run unit tests in debug mode to validate the #ifndef NDEBUG guard branches.
+test:debug:
+  stage: test
+  needs: ["build:debug"]
+  script:
+    - meson test -C build-debug --print-errorlogs
 
 test:abi:
   stage: test
