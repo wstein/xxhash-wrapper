@@ -10,6 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
       - name: Install dependencies
         run: |
           sudo apt-get update
@@ -26,6 +28,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          submodules: true
       - name: Check commit message format
         run: |
           chmod +x scripts/check-commit-msg.sh
@@ -37,6 +40,8 @@ jobs:
     needs: lint-c99
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
       - name: Install dependencies
         run: |
           sudo apt-get update
@@ -58,6 +63,8 @@ jobs:
     needs: lint-c99
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
       - name: Install dependencies
         run: |
           sudo apt-get update
@@ -79,6 +86,8 @@ jobs:
     needs: lint-c99
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
       - name: Install dependencies
         run: |
           sudo apt-get update
@@ -112,6 +121,8 @@ jobs:
             runs_on: macos-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
       - name: Install dependencies (Linux)
         if: runner.os == 'Linux'
         run: |
@@ -138,6 +149,8 @@ jobs:
     needs: build-linux
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
       - name: Install dependencies
         run: |
           sudo apt-get update
@@ -157,6 +170,8 @@ jobs:
     needs: build-inline
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
       - name: Install dependencies
         run: |
           sudo apt-get update
@@ -176,6 +191,8 @@ jobs:
     needs: build-debug
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
       - name: Install dependencies
         run: |
           sudo apt-get update
@@ -195,6 +212,8 @@ jobs:
     needs: build-linux
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
       - name: Install dependencies
         run: |
           sudo apt-get update
@@ -215,6 +234,8 @@ jobs:
     needs: build-linux
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
       - name: Install dependencies
         run: |
           sudo apt-get update
@@ -235,6 +256,8 @@ jobs:
     needs: build-linux
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
       - name: Install dependencies
         run: |
           sudo apt-get update
@@ -254,6 +277,8 @@ jobs:
     needs: lint-c99
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
       - name: Install dependencies
         run: |
           sudo apt-get update
@@ -262,3 +287,4 @@ jobs:
         run: |
           chmod +x scripts/repro-check.sh
           scripts/repro-check.sh
+
