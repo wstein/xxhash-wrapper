@@ -269,6 +269,9 @@ Zen4{plus}
   enable the flag automatically for `buildtype=debug` and expose a Meson option
   (`-Dwrapper_guards=true`) to allow explicit enabling in other build types
   (PR: implement + update tests + README).
+. *Test robustness*: Extended signal-guarded test wrappers (`TEST_TRY_VARIANT`) to
+  cover x86 SIMD variants (AVX2, AVX512) so CI runners that lack those CPU
+  features skip the variant tests instead of failing with SIGILL.
 
   *Guard macro hardening*: Fixed macro-argument parsing under `-std=c99` when
   `NDEBUG` is defined by wrapping multi-statement `XXH3_WRAPPER_GUARD` bodies in

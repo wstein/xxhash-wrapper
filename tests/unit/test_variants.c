@@ -136,10 +136,20 @@ static void test_xxh3_64_variants_match_scalar_short(void)
     TEST_ASSERT_EQUAL_UINT64(ref, xxh3_64_sse2(SHORT_INPUT, size, SEED1));
 #endif
 #if XXH3_HAVE_AVX2
-    TEST_ASSERT_EQUAL_UINT64(ref, xxh3_64_avx2(SHORT_INPUT, size, SEED1));
+    TEST_TRY_VARIANT("AVX2", {
+        uint64_t avx2_result = xxh3_64_avx2(SHORT_INPUT, size, SEED1);
+        if (!_test_skip_variant) {
+            TEST_ASSERT_EQUAL_UINT64(ref, avx2_result);
+        }
+    });
 #endif
 #if XXH3_HAVE_AVX512
-    TEST_ASSERT_EQUAL_UINT64(ref, xxh3_64_avx512(SHORT_INPUT, size, SEED1));
+    TEST_TRY_VARIANT("AVX512", {
+        uint64_t avx512_result = xxh3_64_avx512(SHORT_INPUT, size, SEED1);
+        if (!_test_skip_variant) {
+            TEST_ASSERT_EQUAL_UINT64(ref, avx512_result);
+        }
+    });
 #endif
 #if XXH3_HAVE_NEON
     TEST_ASSERT_EQUAL_UINT64(ref, xxh3_64_neon(SHORT_INPUT, size, SEED1));
@@ -164,10 +174,20 @@ static void test_xxh3_64_variants_match_scalar_lorem(void)
     TEST_ASSERT_EQUAL_UINT64(ref, xxh3_64_sse2(LOREM, size, SEED2));
 #endif
 #if XXH3_HAVE_AVX2
-    TEST_ASSERT_EQUAL_UINT64(ref, xxh3_64_avx2(LOREM, size, SEED2));
+    TEST_TRY_VARIANT("AVX2", {
+        uint64_t avx2_result = xxh3_64_avx2(LOREM, size, SEED2);
+        if (!_test_skip_variant) {
+            TEST_ASSERT_EQUAL_UINT64(ref, avx2_result);
+        }
+    });
 #endif
 #if XXH3_HAVE_AVX512
-    TEST_ASSERT_EQUAL_UINT64(ref, xxh3_64_avx512(LOREM, size, SEED2));
+    TEST_TRY_VARIANT("AVX512", {
+        uint64_t avx512_result = xxh3_64_avx512(LOREM, size, SEED2);
+        if (!_test_skip_variant) {
+            TEST_ASSERT_EQUAL_UINT64(ref, avx512_result);
+        }
+    });
 #endif
 #if XXH3_HAVE_NEON
     TEST_ASSERT_EQUAL_UINT64(ref, xxh3_64_neon(LOREM, size, SEED2));
@@ -196,10 +216,20 @@ static void test_xxh3_64_variants_match_scalar_1mb(void)
     TEST_ASSERT_EQUAL_UINT64(ref, xxh3_64_sse2(buf, size, SEED1));
 #endif
 #if XXH3_HAVE_AVX2
-    TEST_ASSERT_EQUAL_UINT64(ref, xxh3_64_avx2(buf, size, SEED1));
+    TEST_TRY_VARIANT("AVX2", {
+        uint64_t avx2_result = xxh3_64_avx2(buf, size, SEED1);
+        if (!_test_skip_variant) {
+            TEST_ASSERT_EQUAL_UINT64(ref, avx2_result);
+        }
+    });
 #endif
 #if XXH3_HAVE_AVX512
-    TEST_ASSERT_EQUAL_UINT64(ref, xxh3_64_avx512(buf, size, SEED1));
+    TEST_TRY_VARIANT("AVX512", {
+        uint64_t avx512_result = xxh3_64_avx512(buf, size, SEED1);
+        if (!_test_skip_variant) {
+            TEST_ASSERT_EQUAL_UINT64(ref, avx512_result);
+        }
+    });
 #endif
 #if XXH3_HAVE_NEON
     TEST_ASSERT_EQUAL_UINT64(ref, xxh3_64_neon(buf, size, SEED1));
@@ -231,10 +261,22 @@ static void test_xxh3_128_variants_match_scalar_short(void)
     CHECK128(xxh3_128_sse2);
 #endif
 #if XXH3_HAVE_AVX2
-    CHECK128(xxh3_128_avx2);
+    TEST_TRY_VARIANT("AVX2", {
+        xxh3_128_t avx2_result = xxh3_128_avx2(SHORT_INPUT, size, SEED1);
+        if (!_test_skip_variant) {
+            TEST_ASSERT_EQUAL_UINT64(ref.high, avx2_result.high);
+            TEST_ASSERT_EQUAL_UINT64(ref.low,  avx2_result.low);
+        }
+    });
 #endif
 #if XXH3_HAVE_AVX512
-    CHECK128(xxh3_128_avx512);
+    TEST_TRY_VARIANT("AVX512", {
+        xxh3_128_t avx512_result = xxh3_128_avx512(SHORT_INPUT, size, SEED1);
+        if (!_test_skip_variant) {
+            TEST_ASSERT_EQUAL_UINT64(ref.high, avx512_result.high);
+            TEST_ASSERT_EQUAL_UINT64(ref.low,  avx512_result.low);
+        }
+    });
 #endif
 #if XXH3_HAVE_NEON
     CHECK128(xxh3_128_neon);

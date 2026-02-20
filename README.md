@@ -62,6 +62,7 @@ The project uses **GitHub Actions** for continuous integration. The workflow (`.
   - Debug build (validates guard branch coverage)
   - Guard-enabled release build (`-Dwrapper_guards=true`) — exercises defensive API guards in CI
 - **Test:** Unit tests, variant tests (inline, debug, guards), ABI checks, integration tests
+  - Test harness: unit suite wraps potentially-unsafe SIMD variant calls (SVE, AVX2, AVX512) with `TEST_TRY_VARIANT()` signal guards so CI runners skip unsupported CPU variants instead of failing with SIGILL.
   - Note: the unit test suite uses POSIX/XSI signal helpers (`sigjmp_buf`) for signal-guarded variant tests; the test source defines `#define _XOPEN_SOURCE 700` so tests compile cleanly under `-std=c99`.
 - **Verify:** Benchmark runs, reproducible build checks
 

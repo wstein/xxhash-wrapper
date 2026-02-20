@@ -109,7 +109,7 @@
   - ✅ Update `meson.build` to conditionally include x86 variants (SSE2, AVX2, AVX512) only on x86-64 builds
   - ✅ Update `meson.build` to conditionally include ARM variants (NEON, SVE) only on aarch64 builds
   - ✅ Add compile-time feature detection macros (`XXH3_HAVE_*`) to header for safe consumer code
-  - ✅ Update test files (`test_variants.c`, `bench_variants.c`, `fuzz_xxh3.c`) to guard variant calls with preprocessor conditionals
+  - ✅ Update test files (`test_variants.c`, `bench_variants.c`, `fuzz_xxh3.c`) to guard variant calls with preprocessor conditionals and runtime `TEST_TRY_VARIANT()` signal guards for potentially-unsupported SIMD variants (SVE, AVX2, AVX512)
   - ✅ Verify exported symbols match platform spec (no cross-platform exports)
   - ✅ Update `README.md` with Platform-Specific Variant Availability section and feature detection guidance
   - ✅ **Cross-Platform Verification (Feb 19, 2026)**:
