@@ -197,7 +197,13 @@ Example link args:
    - `xxh3_*_neon`: requires AArch64 NEON (baseline for ARM; safe to assume present on aarch64 builds)
    - `xxh3_*_sve`: requires AArch64 SVE (check at runtime; not all ARM CPUs support SVE)
 
-**Debug vs release guard behaviour:** All NULL-pointer and invalid-input guards in the wrapper and variant functions are compiled with `#ifndef NDEBUG` and are **active only in debug builds** (`meson setup -Dbuildtype=debug`). Release builds (the default; `buildtype=release`) have `-DNDEBUG` set by meson, which strips all guards completely. Callers must therefore guarantee valid inputs in release builds — passing a NULL pointer or mismatched state produces undefined behaviour.
+**Debug vs release guard behaviour:** Defensive NULL-pointer and invalid-input guards are available for debugging and are **enabled automatically in debug builds**. Use the compile-time control `XXH3_WRAPPER_GUARDS` to enable guards explicitly; meson sets `-DXXH3_WRAPPER_GUARDS=1` for `buildtype=debug` so guards are active in debug builds even if `NDEBUG` is manipulated.
+
+- Default behaviour: `buildtype=release` → guards are disabled (no runtime overhead).
+- Debug behaviour: `meson setup -Dbuildtype=debug` → guards enabled via `XXH3_WRAPPER_GUARDS`.
+- Manual override: pass compiler flags (example) `meson setup build -Dc_args=-DXXH3_WRAPPER_GUARDS=1` to enable guards in non-debug builds.
+
+When guards are active the library returns safe defaults on invalid inputs (instead of crashing). In release builds callers must guarantee valid inputs; passing invalid pointers or states is undefined behaviour.
 
 This library provides exported symbols per variant but does not do runtime CPU dispatch. Select the appropriate symbol in your consumer. For quick local comparisons, use the provided benchmark:
 

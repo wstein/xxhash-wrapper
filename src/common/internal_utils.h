@@ -4,27 +4,37 @@
 #define XXH3_WRAPPER_UNUSED(x) ((void)(x))
 
 /* --------------------------------------------------------------------------
- * Debug-only assertion guard
+ * Debug-only assertion guard + configurable defensive guards
  *
- * XXH3_DEBUG_ASSERT(expr) evaluates `expr` as a runtime assertion in debug
- * builds (NDEBUG not defined) and compiles to nothing in release builds
- * (NDEBUG defined by the build system, e.g. meson buildtype=release).
+ * XXH3_DEBUG_ASSERT(expr)
+ *   - Behaves like assert(expr) when NDEBUG is not defined; compiles away in
+ *     release builds.
  *
- * Usage:
- *   XXH3_DEBUG_ASSERT(ptr != NULL);
+ * XXH3_WRAPPER_GUARD(stmt)
+ *   - Enable defensive early-return checks when either:
+ *       a) the build is a debug build (NDEBUG not defined), OR
+ *       b) the compile-time flag `XXH3_WRAPPER_GUARDS` is defined.
+ *   - This allows maintainers to force-enable guards in non-debug builds for
+ *     testing and CI without depending solely on NDEBUG.
  *
- * For defensive early-return guards, use #ifndef NDEBUG directly:
- *   #ifndef NDEBUG
- *       if (ptr == NULL) { return 0; }
- *   #endif
+ * Macro semantics:
+ *   XXH3_WRAPPER_GUARD( if (ptr == NULL) { return 0; } );
  *
- * Both approaches are stripped entirely in release builds (-DNDEBUG).
+ * In Meson builds, `XXH3_WRAPPER_GUARDS` is defined automatically for
+ * `buildtype=debug` via `meson.build` project arguments.
  * -------------------------------------------------------------------------- */
 #ifndef NDEBUG
 #  include <assert.h>
 #  define XXH3_DEBUG_ASSERT(expr) assert(expr)
 #else
 #  define XXH3_DEBUG_ASSERT(expr) ((void)0)
+#endif
+
+/* Guard macro: active when explicitly enabled OR when not building with NDEBUG */
+#if defined(XXH3_WRAPPER_GUARDS) || !defined(NDEBUG)
+#  define XXH3_WRAPPER_GUARD(stmt) do { stmt; } while (0)
+#else
+#  define XXH3_WRAPPER_GUARD(stmt) ((void)0)
 #endif
 
 #endif

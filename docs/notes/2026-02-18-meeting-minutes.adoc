@@ -262,6 +262,10 @@ Zen4{plus}
 . *Security*: Review secret generation entropy requirements
 . *Workflow*: Finalize and document the branching strategy selection.
 . *Linting*: Implement `commitlint` for Conventional Commit enforcement.
+. *Defensive guards*: Introduce `XXH3_WRAPPER_GUARDS` compile-time flag and
+  refactor `#ifndef NDEBUG` guards into a uniform `XXH3_WRAPPER_GUARD()` macro;
+  enable the flag automatically for `buildtype=debug` so debug builds exercise
+  all defensive branches (PR: implement + update tests + README).
 
 '''''
 

@@ -13,6 +13,12 @@ project(
 
 cc = meson.get_compiler('c')
 
+# Enable wrapper defensive guards automatically for debug builds so tests can
+# exercise guard branches even if NDEBUG is manipulated externally.
+if get_option('buildtype') == 'debug'
+  add_project_arguments('-DXXH3_WRAPPER_GUARDS=1', language: 'c')
+endif
+
 # Architecture and performance tuning
 cpu_family = host_machine.cpu_family()
 c_args = []
