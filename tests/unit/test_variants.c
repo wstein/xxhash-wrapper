@@ -980,6 +980,36 @@ static void test_xxh64_update_null_state_returns_error(void)
 #endif
 }
 
+/* ------------------------------------------------------------------
+ * Tests that verify the XXH3_WRAPPER_GUARDS compile-time flag and its
+ * observable behaviour (safe early-return on invalid inputs).
+ *
+ * These tests are intentionally tolerant: they run assertions when the
+ * guards are compiled in, and are skipped otherwise so the suite is
+ * safe across both debug/release/guard-enabled builds.
+ * ------------------------------------------------------------------ */
+static void test_xxh3_wrapper_guards_compile_time_flag(void)
+{
+#ifdef XXH3_WRAPPER_GUARDS
+    /* Guard macro is defined at compile time for this build. */
+    TEST_ASSERT_TRUE(1);
+#else
+    TEST_IGNORE_MESSAGE("XXH3_WRAPPER_GUARDS not defined for this build");
+#endif
+}
+
+static void test_xxh3_wrapper_guards_activate_safe_returns(void)
+{
+#if defined(XXH3_WRAPPER_GUARDS)
+    /* When guards are active the API must return safe defaults for NULL/state */
+    TEST_ASSERT_EQUAL_INT(XXH3_ERROR, xxh3_64_update(NULL, LOREM, strlen(LOREM)));
+    TEST_ASSERT_EQUAL_UINT64(0, xxh3_64_digest(NULL));
+    TEST_ASSERT_EQUAL_INT(XXH3_ERROR, xxh3_128_update(NULL, LOREM, strlen(LOREM)));
+#else
+    TEST_IGNORE_MESSAGE("XXH3_WRAPPER_GUARDS not enabled for this build");
+#endif
+}
+
 /* ----------------------------------------------------------- main test runner */
 
 int main(void)
@@ -1071,6 +1101,10 @@ int main(void)
     RUN_TEST(test_xxh3_128_update_null_state_returns_error);
     RUN_TEST(test_xxh32_update_null_state_returns_error);
     RUN_TEST(test_xxh64_update_null_state_returns_error);
+
+    /* guard flag tests */
+    RUN_TEST(test_xxh3_wrapper_guards_compile_time_flag);
+    RUN_TEST(test_xxh3_wrapper_guards_activate_safe_returns);
 
     return UNITY_END();
 }
