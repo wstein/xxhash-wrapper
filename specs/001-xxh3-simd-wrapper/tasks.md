@@ -96,6 +96,7 @@
 
 - [x] Ensure unit tests expose POSIX/XSI feature macros (add `#define _XOPEN_SOURCE 700` to `tests/unit/test_variants.c`) so `sigjmp_buf` and related helpers are available when compiling with `-std=c99`.
 - [x] Add CI lint check to verify test sources declare required feature-test macros when using POSIX/XSI APIs.
+- [x] Fix CI artifact permissions: add `chmod +x` to CI jobs that download and execute build artifacts, as `actions/upload-artifact@v4` strips execute permissions.
 
 - [x] Refactor: replace verbose `xxh3_128_t` zero-initializers in `src/variants/*` with
       concise C99 compound-literal returns (`return ((xxh3_128_t){0,0});`) (style-only).

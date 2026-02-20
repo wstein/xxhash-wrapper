@@ -65,6 +65,7 @@ The project uses **GitHub Actions** for continuous integration. The workflow (`.
   - Test harness: unit suite wraps potentially-unsafe SIMD variant calls (SVE, AVX2, AVX512) with `TEST_TRY_VARIANT()` signal guards so CI runners skip unsupported CPU variants instead of failing with SIGILL.
   - Note: the unit test suite uses POSIX/XSI signal helpers (`sigjmp_buf`) for signal-guarded variant tests; the test source defines `#define _XOPEN_SOURCE 700` so tests compile cleanly under `-std=c99`.
 - **Verify:** Benchmark runs, reproducible build checks
+  - CI artifacts: `actions/upload-artifact@v4` strips execute permissions. The workflow restores them via `chmod +x` before running tests and benchmarks.
 
 View the workflow status and logs on the [repository's Actions page](https://github.com/wstein/xxhash-wrapper/actions).
 

@@ -264,6 +264,7 @@ Zen4{plus}
 . *Workflow*: Finalize and document the branching strategy selection.
 . *Linting*: Implement `commitlint` for Conventional Commit enforcement.
 . *Test-source macro lint*: Add CI check to ensure test sources using POSIX/XSI APIs define required feature-test macros (e.g. `_XOPEN_SOURCE 700`) before system headers.
+. *CI Artifact Permissions*: Add `chmod +x` to CI jobs that download and execute build artifacts, as `actions/upload-artifact@v4` strips execute permissions.
 . *Defensive guards*: Introduce `XXH3_WRAPPER_GUARDS` compile-time flag and
   refactor `#ifndef NDEBUG` guards into a uniform `XXH3_WRAPPER_GUARD()` macro;
   enable the flag automatically for `buildtype=debug` and expose a Meson option

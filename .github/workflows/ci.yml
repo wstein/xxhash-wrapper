@@ -59,6 +59,7 @@ jobs:
         with:
           name: build-linux
           path: build/
+          include-hidden-files: true
           retention-days: 1
 
   build-inline:
@@ -82,6 +83,7 @@ jobs:
         with:
           name: build-inline
           path: build-inline/
+          include-hidden-files: true
           retention-days: 1
 
   build-debug:
@@ -105,6 +107,7 @@ jobs:
         with:
           name: build-debug
           path: build-debug/
+          include-hidden-files: true
           retention-days: 1
 
   build-guards:
@@ -128,6 +131,7 @@ jobs:
         with:
           name: build-guards
           path: build-guards/
+          include-hidden-files: true
           retention-days: 1
 
   build-matrix:
@@ -168,6 +172,7 @@ jobs:
         with:
           name: build-${{ matrix.target_os }}-${{ matrix.target_arch }}
           path: build-${{ matrix.target_os }}-${{ matrix.target_arch }}/
+          include-hidden-files: true
           retention-days: 1
 
   test-unit:
@@ -189,6 +194,7 @@ jobs:
           path: build/
       - name: Run unit tests
         run: |
+          chmod +x build/test_variants
           meson test -C build --print-errorlogs
 
   test-inline:
@@ -210,6 +216,7 @@ jobs:
           path: build-inline/
       - name: Run tests with XXH_INLINE_ALL
         run: |
+          chmod +x build-inline/test_variants
           meson test -C build-inline --print-errorlogs
 
   test-debug:
@@ -231,6 +238,7 @@ jobs:
           path: build-debug/
       - name: Run tests in debug mode
         run: |
+          chmod +x build-debug/test_variants
           meson test -C build-debug --print-errorlogs
 
   test-guards:
@@ -252,6 +260,7 @@ jobs:
           path: build-guards/
       - name: Run tests with wrapper guards
         run: |
+          chmod +x build-guards/test_variants
           meson test -C build-guards --print-errorlogs
 
   test-abi:
@@ -317,6 +326,7 @@ jobs:
           path: build/
       - name: Run benchmarks
         run: |
+          chmod +x build/bench_variants
           ./build/bench_variants
 
   verify-reproducible:
