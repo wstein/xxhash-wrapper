@@ -13,9 +13,10 @@ project(
 
 cc = meson.get_compiler('c')
 
-# Enable wrapper defensive guards automatically for debug builds so tests can
-# exercise guard branches even if NDEBUG is manipulated externally.
-if get_option('buildtype') == 'debug'
+# Enable wrapper defensive guards automatically for debug builds or when the
+# user explicitly requests them via the `wrapper_guards` Meson option. This
+# defines `XXH3_WRAPPER_GUARDS=1` for all C compilation units.
+if get_option('buildtype') == 'debug' or get_option('wrapper_guards')
   add_project_arguments('-DXXH3_WRAPPER_GUARDS=1', language: 'c')
 endif
 

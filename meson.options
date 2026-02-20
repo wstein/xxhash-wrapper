@@ -5,4 +5,11 @@ option(
   description: 'Build the libFuzzer fuzz harness (requires -fsanitize=fuzzer,address support)',
 )
 
+option(
+  'wrapper_guards',
+  type: 'boolean',
+  value: false,
+  description: 'Enable defensive API guards (defines XXH3_WRAPPER_GUARDS). Defaults to on for debug builds.',
+)
+
 

@@ -201,6 +201,7 @@ Example link args:
 
 - Default behaviour: `buildtype=release` → guards are disabled (no runtime overhead).
 - Debug behaviour: `meson setup -Dbuildtype=debug` → guards enabled via `XXH3_WRAPPER_GUARDS`.
+- Explicit Meson option: `meson setup build -Dwrapper_guards=true` will enable the defensive guards for that build.
 - Manual override: pass compiler flags (example) `meson setup build -Dc_args=-DXXH3_WRAPPER_GUARDS=1` to enable guards in non-debug builds.
 
 When guards are active the library returns safe defaults on invalid inputs (instead of crashing). In release builds callers must guarantee valid inputs; passing invalid pointers or states is undefined behaviour.
