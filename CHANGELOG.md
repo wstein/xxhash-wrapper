@@ -15,6 +15,8 @@ xxHash version.
 - GitHub Actions CI workflow (`.github/workflows/ci.yml`) replacing GitLab CI: linting,
   multi-platform builds (Linux x86-64, Linux aarch64, macOS arm64), variant testing
   (inline, debug, ABI, integration), and verification jobs (benchmarks, reproducibility)
+- CI lint check: verify test source files declare POSIX/XSI feature-test macros
+  (e.g. `_XOPEN_SOURCE`) before system headers when using signal/setjmp APIs.
 - Debug-only parameter validation guards (`#ifndef NDEBUG` blocks) on all wrapper
   delegate functions in `src/xxh3_wrapper.c` and all per-variant single-shot functions
   in `src/variants/*.c`. Guards check for NULL state/input pointers and return safe

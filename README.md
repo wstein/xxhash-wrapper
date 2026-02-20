@@ -55,6 +55,7 @@ The build no longer accepts a global `simd_backend` option. Each SIMD variant is
 The project uses **GitHub Actions** for continuous integration. The workflow (`.github/workflows/ci.yml`) runs on every push and pull request and includes:
 
 - **Linting:** C99 compliance check, commit message validation
+  - **Test-source feature macros:** CI verifies test sources that use POSIX/XSI APIs define an appropriate feature-test macro (e.g. `_XOPEN_SOURCE`) before system headers.
 - **Build:** Multi-platform builds (Linux x86-64, Linux aarch64, macOS arm64) plus variant builds:
   - Standard release build
   - XXH_INLINE_ALL build (detects include-order regressions)
