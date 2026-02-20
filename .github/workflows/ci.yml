@@ -1,0 +1,264 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  lint-c99:
+    name: Lint C99
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential meson ninja-build python3
+      - name: Lint C99 compliance
+        run: |
+          meson setup build-lint -Dc_args=-std=c99
+          meson compile -C build-lint
+
+  lint-commit-msg:
+    name: Lint commit message
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check commit message format
+        run: |
+          chmod +x scripts/check-commit-msg.sh
+          scripts/check-commit-msg.sh "${{ github.event.head_commit.message || 'chore(ci): default' }}"
+
+  build-linux:
+    name: Build (Linux native)
+    runs-on: ubuntu-latest
+    needs: lint-c99
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential meson ninja-build python3
+      - name: Build
+        run: |
+          meson setup build -Dbuildtype=release
+          meson compile -C build
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-linux
+          path: build/
+          retention-days: 1
+
+  build-inline:
+    name: Build (XXH_INLINE_ALL)
+    runs-on: ubuntu-latest
+    needs: lint-c99
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential meson ninja-build python3
+      - name: Build with XXH_INLINE_ALL
+        run: |
+          meson setup build-inline -Dc_args=-DXXH_INLINE_ALL
+          meson compile -C build-inline
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-inline
+          path: build-inline/
+          retention-days: 1
+
+  build-debug:
+    name: Build (Debug)
+    runs-on: ubuntu-latest
+    needs: lint-c99
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential meson ninja-build python3
+      - name: Build debug configuration
+        run: |
+          meson setup build-debug -Dbuildtype=debug
+          meson compile -C build-debug
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-debug
+          path: build-debug/
+          retention-days: 1
+
+  build-matrix:
+    name: Build matrix (${{ matrix.target_os }}/${{ matrix.target_arch }})
+    runs-on: ${{ matrix.runs_on }}
+    needs: lint-c99
+    strategy:
+      matrix:
+        include:
+          - target_os: linux
+            target_arch: x86_64
+            runs_on: ubuntu-latest
+          - target_os: linux
+            target_arch: aarch64
+            runs_on: ubuntu-latest
+          - target_os: macos
+            target_arch: arm64
+            runs_on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential meson ninja-build python3
+      - name: Install dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install meson ninja
+      - name: Build for ${{ matrix.target_os }}/${{ matrix.target_arch }}
+        run: |
+          meson setup build-${{ matrix.target_os }}-${{ matrix.target_arch }} -Dbuildtype=release
+          meson compile -C build-${{ matrix.target_os }}-${{ matrix.target_arch }}
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-${{ matrix.target_os }}-${{ matrix.target_arch }}
+          path: build-${{ matrix.target_os }}-${{ matrix.target_arch }}/
+          retention-days: 1
+
+  test-unit:
+    name: Test (Unit)
+    runs-on: ubuntu-latest
+    needs: build-linux
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential meson ninja-build python3
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-linux
+          path: build/
+      - name: Run unit tests
+        run: |
+          meson test -C build --print-errorlogs
+
+  test-inline:
+    name: Test (XXH_INLINE_ALL)
+    runs-on: ubuntu-latest
+    needs: build-inline
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential meson ninja-build python3
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-inline
+          path: build-inline/
+      - name: Run tests with XXH_INLINE_ALL
+        run: |
+          meson test -C build-inline --print-errorlogs
+
+  test-debug:
+    name: Test (Debug)
+    runs-on: ubuntu-latest
+    needs: build-debug
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential meson ninja-build python3
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-debug
+          path: build-debug/
+      - name: Run tests in debug mode
+        run: |
+          meson test -C build-debug --print-errorlogs
+
+  test-abi:
+    name: Test (ABI)
+    runs-on: ubuntu-latest
+    needs: build-linux
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential meson ninja-build python3
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-linux
+          path: build/
+      - name: Run ABI check
+        run: |
+          chmod +x scripts/check-abi.sh
+          scripts/check-abi.sh
+
+  test-integration:
+    name: Test (Integration)
+    runs-on: ubuntu-latest
+    needs: build-linux
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential meson ninja-build python3
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-linux
+          path: build/
+      - name: Run integration tests
+        run: |
+          chmod +x tests/integration/check-cr-xxhash.sh
+          tests/integration/check-cr-xxhash.sh
+
+  verify-bench:
+    name: Verify (Benchmarks)
+    runs-on: ubuntu-latest
+    needs: build-linux
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential meson ninja-build python3
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-linux
+          path: build/
+      - name: Run benchmarks
+        run: |
+          ./build/bench_variants
+
+  verify-reproducible:
+    name: Verify (Reproducible builds)
+    runs-on: ubuntu-latest
+    needs: lint-c99
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential meson ninja-build python3
+      - name: Check build reproducibility
+        run: |
+          chmod +x scripts/repro-check.sh
+          scripts/repro-check.sh

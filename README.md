@@ -48,6 +48,20 @@ docker run --platform linux/arm64 --rm -v $(pwd):/src:ro alpine:latest sh -c '
 
 The build no longer accepts a global `simd_backend` option. Each SIMD variant is compiled in its own translation unit with its own `XXH_VECTOR` and CPU flags, and all variants are linked into the wrapper. See [Platform-Specific Verification Results](docs/PLATFORM_VERIFICATION.md) for detailed build and export examples across platforms.
 
+## CI/CD
+
+The project uses **GitHub Actions** for continuous integration. The workflow (`.github/workflows/ci.yml`) runs on every push and pull request and includes:
+
+- **Linting:** C99 compliance check, commit message validation
+- **Build:** Multi-platform builds (Linux x86-64, Linux aarch64, macOS arm64) plus variant builds:
+  - Standard release build
+  - XXH_INLINE_ALL build (detects include-order regressions)
+  - Debug build (validates guard branch coverage)
+- **Test:** Unit tests, variant tests (inline, debug), ABI checks, integration tests
+- **Verify:** Benchmark runs, reproducible build checks
+
+View the workflow status and logs on the [repository's Actions page](https://github.com/wstein/xxhash-wrapper/actions).
+
 ## Public API
 
 - XXH3 single-shot variants: `xxh3_64_<variant>()`, `xxh3_128_<variant>()` — seeded (explicit seed parameter)
