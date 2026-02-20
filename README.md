@@ -1,5 +1,7 @@
 # xxhash-wrapper
 
+[![CI](https://github.com/wstein/xxhash-wrapper/actions/workflows/ci.yml/badge.svg)](https://github.com/wstein/xxhash-wrapper/actions/workflows/ci.yml) [![Release](https://img.shields.io/github/v/release/wstein/xxhash-wrapper?label=release)](https://github.com/wstein/xxhash-wrapper/releases)
+
 SIMD-exporting XXH3 wrapper library for C-compatible consumers.
 
 ## Build
