@@ -69,6 +69,19 @@ The project uses **GitHub Actions** for continuous integration. The workflow (`.
 
 View the workflow status and logs on the [repository's Actions page](https://github.com/wstein/xxhash-wrapper/actions).
 
+## Versioning & Release Policy
+
+This project follows **Numeric Quad versioning**: `MAJOR.MINOR.PATCH.WRAPPER_PATCH`.
+- The first three digits (`MAJOR.MINOR.PATCH`) track the vendored **xxHash** version.
+- The fourth digit (`WRAPPER_PATCH`) is for wrapper-specific fixes and improvements.
+
+### Release Strategy (GitLab Flow)
+- **Main Development**: The `main` branch is used for new features and tracking the latest xxHash developments. Feature releases (e.g., `0.8.4.0`) are tagged directly from `main`.
+- **Maintenance (Patch Releases)**:
+  - For patch releases (e.g., `0.8.3.1`, `0.8.3.2`), a long-lived release branch `v0.8.3.x` is created from the initial version tag (e.g., `0.8.3.0`) on-demand.
+  - Bug fixes are applied to these release branches and tagged accordingly.
+  - This allows supporting multiple vendor versions simultaneously if needed.
+
 ## Public API
 
 - XXH3 single-shot variants: `xxh3_64_<variant>()`, `xxh3_128_<variant>()` — seeded (explicit seed parameter)
