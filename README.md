@@ -61,6 +61,7 @@ The project uses **GitHub Actions** for continuous integration. The workflow (`.
   - Debug build (validates guard branch coverage)
   - Guard-enabled release build (`-Dwrapper_guards=true`) — exercises defensive API guards in CI
 - **Test:** Unit tests, variant tests (inline, debug, guards), ABI checks, integration tests
+  - Note: the unit test suite uses POSIX/XSI signal helpers (`sigjmp_buf`) for signal-guarded variant tests; the test source defines `#define _XOPEN_SOURCE 700` so tests compile cleanly under `-std=c99`.
 - **Verify:** Benchmark runs, reproducible build checks
 
 View the workflow status and logs on the [repository's Actions page](https://github.com/wstein/xxhash-wrapper/actions).

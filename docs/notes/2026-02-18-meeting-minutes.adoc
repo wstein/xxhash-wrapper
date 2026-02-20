@@ -257,6 +257,7 @@ unconditionally; ARM exports NEON/SVE only when compiled for aarch64.
 [arabic]
 . *Documentation*: Update architecture-specific build guides
 . *Testing*: Expand CI coverage for emerging architectures
+. *Testing (C99)*: Ensure test-suite feature-test macros expose POSIX/XSI helpers (e.g. `sigjmp_buf`) for `-std=c99` builds (`tests/unit/test_variants.c` defines `_XOPEN_SOURCE 700`).
 . *Performance*: Investigate auto-vectorization improvements for
 Zen4{plus}
 . *Security*: Review secret generation entropy requirements

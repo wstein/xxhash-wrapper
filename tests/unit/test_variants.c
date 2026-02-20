@@ -27,6 +27,9 @@
  * =============================================================================
  */
 
+/* Expose POSIX/XSI helpers (sigjmp_buf/sigsetjmp) when compiling under -std=c99. */
+#define _XOPEN_SOURCE 700
+
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
