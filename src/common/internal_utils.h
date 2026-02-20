@@ -34,11 +34,15 @@
 #  define XXH3_DEBUG_ASSERT(expr) ((void)0)
 #endif
 
-/* Guard macro: active when explicitly enabled OR when not building with NDEBUG */
+/* Guard macro: active when explicitly enabled OR when not building with NDEBUG
+ *
+ * Variadic form accepts comma-containing expressions (e.g. compound literals)
+ * inside guard bodies without preprocessor argument-splitting. Prefer the
+ * block form `XXH3_WRAPPER_GUARD({ ... })` for multi-statement guards. */
 #if defined(XXH3_WRAPPER_GUARDS) || !defined(NDEBUG)
-#  define XXH3_WRAPPER_GUARD(stmt) do { stmt; } while (0)
+#  define XXH3_WRAPPER_GUARD(...) do { __VA_ARGS__ } while (0)
 #else
-#  define XXH3_WRAPPER_GUARD(stmt) ((void)0)
+#  define XXH3_WRAPPER_GUARD(...) ((void)0)
 #endif
 
 #endif

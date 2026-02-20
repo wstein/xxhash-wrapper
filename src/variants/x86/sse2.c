@@ -21,10 +21,7 @@ xxh3_128_t xxh3_128_sse2(const void* input, size_t size, uint64_t seed)
 {
     XXH3_WRAPPER_GUARD({
         if (input == NULL && size > 0) {
-            xxh3_128_t zero;
-            zero.high = 0;
-            zero.low  = 0;
-            return zero;
+            return ((xxh3_128_t){0,0});
         }
     });
     return xxh128_to_xxh3(XXH3_128bits_withSeed(input, size, seed));
@@ -45,10 +42,7 @@ xxh3_128_t xxh3_128_sse2_unseeded(const void* input, size_t size)
 {
     XXH3_WRAPPER_GUARD({
         if (input == NULL && size > 0) {
-            xxh3_128_t zero;
-            zero.high = 0;
-            zero.low  = 0;
-            return zero;
+            return ((xxh3_128_t){0,0});
         }
     });
     return xxh128_to_xxh3(XXH3_128bits_withSeed(input, size, 0));

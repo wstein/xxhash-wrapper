@@ -94,6 +94,9 @@
 
 **Purpose**: Final quality checks, documentation, and compliance.
 
+- [x] Refactor: replace verbose `xxh3_128_t` zero-initializers in `src/variants/*` with
+      concise C99 compound-literal returns (`return ((xxh3_128_t){0,0});`) (style-only).
+
 - [x] T023 Finalize Inclusive Naming across all files in `src/` and `include/`
 - [x] T024 [P] Verify reproducible build checksums across Linux and macOS environments
 - [x] T025 Update `README.md` with usage examples and FFI integration guide

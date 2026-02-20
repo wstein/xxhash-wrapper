@@ -34,6 +34,9 @@ xxHash version.
 ### Changed
 - `tests/bench/bench_variants.c`: added `_POSIX_C_SOURCE 199309L` guard so
   `clock_gettime` / `CLOCK_MONOTONIC` compile correctly with `-std=c99` on Linux/Alpine
+- Refactor: use C99 compound literals for `xxh3_128_t` zero returns in variant
+  sources and make `XXH3_WRAPPER_GUARD` variadic so compound literals are safe
+  inside guard bodies (style-only change, no behavioural impact).
 
 ### Fixed
 - Duplicate comment block in `include/xxh3.h` (stale `* - xxh3_*_avx2` block removed)

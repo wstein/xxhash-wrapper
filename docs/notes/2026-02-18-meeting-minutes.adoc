@@ -272,6 +272,9 @@ Zen4{plus}
   `NDEBUG` is defined by wrapping multi-statement `XXH3_WRAPPER_GUARD` bodies in
   `{ ... }` and avoiding bare braced initializers inside guard blocks.
 
+  *Micro-refactor (style)*: Replaced verbose `xxh3_128_t` zero-initializers in
+  `src/variants/*` with concise C99 compound-literal returns (`return ((xxh3_128_t){0,0});`).
+
 '''''
 
 === 11. Technical Questions Addressed

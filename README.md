@@ -209,6 +209,8 @@ When guards are active the library returns safe defaults on invalid inputs (inst
 
 Note: the guard macro usage has been hardened — macro arguments are safe under `-std=c99` with `NDEBUG` defined (CI C99 lint builds will no longer fail due to macro-argument parsing). Use the `XXH3_WRAPPER_GUARD({ ... })` form for multi-statement guards.
 
+Code cleanup: variant implementations now return zeroed `xxh3_128_t` values with concise C99 compound literals (`return ((xxh3_128_t){0,0});`) where appropriate (style-only change).
+
 This library provides exported symbols per variant but does not do runtime CPU dispatch. Select the appropriate symbol in your consumer. For quick local comparisons, use the provided benchmark:
 
 ```sh
