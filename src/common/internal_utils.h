@@ -17,8 +17,12 @@
  *   - This allows maintainers to force-enable guards in non-debug builds for
  *     testing and CI without depending solely on NDEBUG.
  *
- * Macro semantics:
- *   XXH3_WRAPPER_GUARD( if (ptr == NULL) { return 0; } );
+ * Macro semantics (recommended):
+ *   XXH3_WRAPPER_GUARD({ if (ptr == NULL) { return 0; } });
+ *
+ * Note: do not pass braced initializers (e.g. `xxh3_128_t v = {0, 0};`) directly
+ *       as macro arguments — the preprocessor can split commas inside `{}`.
+ *       Use explicit field assignments or wrap initializers in parentheses.
  *
  * In Meson builds, `XXH3_WRAPPER_GUARDS` is defined automatically for
  * `buildtype=debug` via `meson.build` project arguments.

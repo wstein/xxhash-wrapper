@@ -28,6 +28,11 @@ void tearDown(void);
         } \
     } while (0)
 
+/* Compatibility: Unity helper used in tests to skip a test with a message. */
+#ifndef TEST_IGNORE_MESSAGE
+#  define TEST_IGNORE_MESSAGE(msg) do { (void)(msg); return; } while (0)
+#endif
+
 #define TEST_ASSERT_EQUAL_UINT64(expected, actual) \
     do { \
         unsigned long long unity_exp = (unsigned long long)(expected); \

@@ -207,6 +207,8 @@ Example link args:
 
 When guards are active the library returns safe defaults on invalid inputs (instead of crashing). In release builds callers must guarantee valid inputs; passing invalid pointers or states is undefined behaviour.
 
+Note: the guard macro usage has been hardened — macro arguments are safe under `-std=c99` with `NDEBUG` defined (CI C99 lint builds will no longer fail due to macro-argument parsing). Use the `XXH3_WRAPPER_GUARD({ ... })` form for multi-statement guards.
+
 This library provides exported symbols per variant but does not do runtime CPU dispatch. Select the appropriate symbol in your consumer. For quick local comparisons, use the provided benchmark:
 
 ```sh

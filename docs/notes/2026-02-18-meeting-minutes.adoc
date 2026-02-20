@@ -268,6 +268,10 @@ Zen4{plus}
   (`-Dwrapper_guards=true`) to allow explicit enabling in other build types
   (PR: implement + update tests + README).
 
+  *Guard macro hardening*: Fixed macro-argument parsing under `-std=c99` when
+  `NDEBUG` is defined by wrapping multi-statement `XXH3_WRAPPER_GUARD` bodies in
+  `{ ... }` and avoiding bare braced initializers inside guard blocks.
+
 '''''
 
 === 11. Technical Questions Addressed

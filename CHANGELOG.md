@@ -37,6 +37,7 @@ xxHash version.
 
 ### Fixed
 - Duplicate comment block in `include/xxh3.h` (stale `* - xxh3_*_avx2` block removed)
+- Guard macro usage: prevent preprocessor argument-splitting in `-std=c99`/`NDEBUG` builds by wrapping multi-statement `XXH3_WRAPPER_GUARD` arguments in `{ ... }` and replacing braced initializers inside guard blocks where necessary (fixes CI lint failure).
 
 ---
 
