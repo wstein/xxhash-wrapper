@@ -75,12 +75,13 @@ typedef struct xxh3_state_t xxh3_state_t;
 #define XXH3_OK 0
 #define XXH3_ERROR 1
 
-uint64_t xxh3_64(const void* input, size_t size, uint64_t seed);
-xxh3_128_t xxh3_128(const void* input, size_t size, uint64_t seed);
-
-/* Unseeded single-shot functions (default seed=0) */
-uint64_t xxh3_64_unseeded(const void* input, size_t size);
-xxh3_128_t xxh3_128_unseeded(const void* input, size_t size);
+/* Generic dispatcher functions (e.g. `xxh3_64`, `xxh3_128` and their
+ * unseeded counterparts) were removed from the wrapper. Consumers must call
+ * per-variant functions directly (for example: `xxh3_64_scalar()`,
+ * `xxh3_64_avx2()`, `xxh3_128_neon_unseeded()`, etc.) or implement their own
+ * dispatch logic.
+ *
+ * Per-variant prototypes are declared below (e.g. `xxh3_64_scalar()`). */
 
 uint64_t xxh3_64_scalar(const void* input, size_t size, uint64_t seed);
 uint64_t xxh3_64_scalar_unseeded(const void* input, size_t size);

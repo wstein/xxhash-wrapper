@@ -128,7 +128,7 @@ static void test_xxh3_64_variants_match_scalar_short(void)
     const size_t   size = strlen(SHORT_INPUT);
     const uint64_t ref  = xxh3_64_scalar(SHORT_INPUT, size, SEED1);
 
-    TEST_ASSERT_EQUAL_UINT64(ref, xxh3_64(SHORT_INPUT, size, SEED1));
+    TEST_ASSERT_EQUAL_UINT64(ref, xxh3_64_scalar(SHORT_INPUT, size, SEED1));
 #if XXH3_HAVE_SSE2
     TEST_ASSERT_EQUAL_UINT64(ref, xxh3_64_sse2(SHORT_INPUT, size, SEED1));
 #endif
@@ -156,7 +156,7 @@ static void test_xxh3_64_variants_match_scalar_lorem(void)
     const size_t   size = strlen(LOREM);
     const uint64_t ref  = xxh3_64_scalar(LOREM, size, SEED2);
 
-    TEST_ASSERT_EQUAL_UINT64(ref, xxh3_64(LOREM, size, SEED2));
+    TEST_ASSERT_EQUAL_UINT64(ref, xxh3_64_scalar(LOREM, size, SEED2));
 #if XXH3_HAVE_SSE2
     TEST_ASSERT_EQUAL_UINT64(ref, xxh3_64_sse2(LOREM, size, SEED2));
 #endif
@@ -188,7 +188,7 @@ static void test_xxh3_64_variants_match_scalar_1mb(void)
     TEST_ASSERT_NOT_NULL(buf);
     ref = xxh3_64_scalar(buf, size, SEED1);
 
-    TEST_ASSERT_EQUAL_UINT64(ref, xxh3_64(buf, size, SEED1));
+    TEST_ASSERT_EQUAL_UINT64(ref, xxh3_64_scalar(buf, size, SEED1));
 #if XXH3_HAVE_SSE2
     TEST_ASSERT_EQUAL_UINT64(ref, xxh3_64_sse2(buf, size, SEED1));
 #endif
@@ -223,7 +223,7 @@ static void test_xxh3_128_variants_match_scalar_short(void)
     TEST_ASSERT_EQUAL_UINT64(ref.high, fn(SHORT_INPUT, size, SEED1).high); \
     TEST_ASSERT_EQUAL_UINT64(ref.low,  fn(SHORT_INPUT, size, SEED1).low)
 
-    CHECK128(xxh3_128);
+    CHECK128(xxh3_128_scalar);
 #if XXH3_HAVE_SSE2
     CHECK128(xxh3_128_sse2);
 #endif
@@ -261,7 +261,7 @@ static void test_xxh3_64_unseeded_matches_seed_zero(void)
 {
     const size_t   size           = strlen(LOREM);
     const uint64_t with_seed_zero = xxh3_64_scalar(LOREM, size, 0);
-    const uint64_t unseeded       = xxh3_64_unseeded(LOREM, size);
+    const uint64_t unseeded       = xxh3_64_scalar_unseeded(LOREM, size);
 
     TEST_ASSERT_EQUAL_UINT64(with_seed_zero, unseeded);
 }
@@ -279,7 +279,7 @@ static void test_xxh3_128_unseeded_matches_seed_zero(void)
 {
     const size_t     size           = strlen(LOREM);
     const xxh3_128_t with_seed_zero = xxh3_128_scalar(LOREM, size, 0);
-    const xxh3_128_t unseeded       = xxh3_128_unseeded(LOREM, size);
+    const xxh3_128_t unseeded       = xxh3_128_scalar_unseeded(LOREM, size);
 
     TEST_ASSERT_EQUAL_UINT64(with_seed_zero.high, unseeded.high);
     TEST_ASSERT_EQUAL_UINT64(with_seed_zero.low,  unseeded.low);
@@ -573,11 +573,11 @@ static void test_xxh3_withSecretandSeed_matches_seed_when_secret_from_seed(void)
     TEST_ASSERT_NOT_NULL(buf);
     xxh3_generateSecret_fromSeed(secret, seed);
 
-    uint64_t seeded = xxh3_64(buf, size, seed);
+    uint64_t seeded = xxh3_64_scalar(buf, size, seed);
     uint64_t with_combined = xxh3_64_withSecretandSeed(buf, size, secret, sizeof(secret), seed);
     TEST_ASSERT_EQUAL_UINT64(seeded, with_combined);
 
-    xxh3_128_t seeded128 = xxh3_128(buf, size, seed);
+    xxh3_128_t seeded128 = xxh3_128_scalar(buf, size, seed);
     xxh3_128_t with_combined128 = xxh3_128_withSecretandSeed(buf, size, secret, sizeof(secret), seed);
     TEST_ASSERT_EQUAL_UINT64(seeded128.high, with_combined128.high);
     TEST_ASSERT_EQUAL_UINT64(seeded128.low,  with_combined128.low);
@@ -595,11 +595,11 @@ static void test_xxh3_withSecretandSeed_respects_both_secret_and_seed(void)
 
     for (i = 0; i < sizeof(secret); ++i) secret[i] = (unsigned char)(i * 17 + 3);
 
-    uint64_t seeded = xxh3_64(buf, size, seed);
+    uint64_t seeded = xxh3_64_scalar(buf, size, seed);
     uint64_t combined = xxh3_64_withSecretandSeed(buf, size, secret, sizeof(secret), seed);
     TEST_ASSERT_NOT_EQUAL(seeded, combined);
 
-    xxh3_128_t seeded128 = xxh3_128(buf, size, seed);
+    xxh3_128_t seeded128 = xxh3_128_scalar(buf, size, seed);
     xxh3_128_t combined128 = xxh3_128_withSecretandSeed(buf, size, secret, sizeof(secret), seed);
     TEST_ASSERT_TRUE(seeded128.high != combined128.high || seeded128.low != combined128.low);
 

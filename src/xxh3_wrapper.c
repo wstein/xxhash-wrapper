@@ -22,52 +22,15 @@ static inline xxh3_128_t xxh3_convert_128(XXH128_hash_t value)
     return xxh128_to_xxh3(value);
 }
 
-// xxh3_64_scalar and xxh3_128_scalar are now in src/variants/scalar.c
+/* NOTE: generic dispatcher functions were removed from the wrapper
+ * The library intentionally does NOT provide an internal runtime dispatcher
+ * for `xxh3_64`/`xxh3_128` or their unseeded variants. Consumers must call
+ * the per-variant symbols (e.g. `xxh3_64_scalar()`, `xxh3_64_avx2()`,
+ * `xxh3_64_neon_unseeded()`, etc.) or implement their own dispatch logic.
+ *
+ * Per-variant `*_scalar` implementations remain in `src/variants/scalar.c`.
+ */
 
-uint64_t xxh3_64(const void* input, size_t size, uint64_t seed)
-{
-#if defined(__aarch64__) || defined(_M_ARM64)
-    return xxh3_64_neon(input, size, seed);
-#elif defined(__x86_64__) || defined(_M_X64)
-    return xxh3_64_avx2(input, size, seed);
-#else
-    return xxh3_64_scalar(input, size, seed);
-#endif
-}
-
-xxh3_128_t xxh3_128(const void* input, size_t size, uint64_t seed)
-{
-#if defined(__aarch64__) || defined(_M_ARM64)
-    return xxh3_128_neon(input, size, seed);
-#elif defined(__x86_64__) || defined(_M_X64)
-    return xxh3_128_avx2(input, size, seed);
-#else
-    return xxh3_128_scalar(input, size, seed);
-#endif
-}
-
-/* Unseeded dispatchers (seed=0 by default) */
-uint64_t xxh3_64_unseeded(const void* input, size_t size)
-{
-#if defined(__aarch64__) || defined(_M_ARM64)
-    return xxh3_64_neon_unseeded(input, size);
-#elif defined(__x86_64__) || defined(_M_X64)
-    return xxh3_64_avx2_unseeded(input, size);
-#else
-    return xxh3_64_scalar_unseeded(input, size);
-#endif
-}
-
-xxh3_128_t xxh3_128_unseeded(const void* input, size_t size)
-{
-#if defined(__aarch64__) || defined(_M_ARM64)
-    return xxh3_128_neon_unseeded(input, size);
-#elif defined(__x86_64__) || defined(_M_X64)
-    return xxh3_128_avx2_unseeded(input, size);
-#else
-    return xxh3_128_scalar_unseeded(input, size);
-#endif
-}
 
 xxh3_state_t* xxh3_createState(void)
 {

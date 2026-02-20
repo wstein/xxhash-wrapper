@@ -16,8 +16,8 @@ exports to identify gaps and ensure complete API coverage.
 ===== Vendor Functions EXPORTED by Wrapper
 
 *XXH3 64-bit (Single-shot & Streaming)*
-* `xxh3_64()` — dispatches to best variant (seeded)
-* `xxh3_64_unseeded()` — dispatches to best variant (seed=0)
+* `xxh3_64()` — **removed from wrapper**; consumers must call per-variant symbols (e.g. `xxh3_64_scalar()`, `xxh3_64_avx2()`).
+* `xxh3_64_unseeded()` — **removed from wrapper**; use per-variant unseeded functions (e.g. `xxh3_64_scalar_unseeded()`).
 * `xxh3_64_<variant>()` — explicit variants: scalar, sse2, avx2, avx512, neon, sve (seeded)
 * `xxh3_64_<variant>_unseeded()` — all 6 variants unseeded
 * `xxh3_64_reset()` — start streaming with seed
@@ -27,8 +27,8 @@ exports to identify gaps and ensure complete API coverage.
 * `xxh3_64_withSecret()` — single-shot with custom secret
 
 *XXH3 128-bit (Single-shot & Streaming)*
-* `xxh3_128()` — dispatches to best variant (seeded)
-* `xxh3_128_unseeded()` — dispatches to best variant (seed=0)
+* `xxh3_128()` — **removed from wrapper**; consumers must call per-variant symbols (e.g. `xxh3_128_scalar()`, `xxh3_128_neon()`).
+* `xxh3_128_unseeded()` — **removed from wrapper**; use per-variant unseeded functions (e.g. `xxh3_128_scalar_unseeded()`).
 * `xxh3_128_<variant>()` — explicit variants (seeded)
 * `xxh3_128_<variant>_unseeded()` — all 6 variants unseeded
 * `xxh3_128_reset()` — start streaming with seed
@@ -110,23 +110,15 @@ uint64_t xxh3_64_sve_unseeded(const void* input, size_t size)
     return XXH3_64bits_withSeed(input, size, 0);  // Simple delegation
 }
 
-// In wrapper dispatcher
-uint64_t xxh3_64_unseeded(const void* input, size_t size)
-{
-#if defined(__aarch64__)
-    return xxh3_64_neon_unseeded(input, size);  // Auto-select best variant
-#elif defined(__x86_64__)
-    return xxh3_64_avx2_unseeded(input, size);
-#else
-    return xxh3_64_scalar_unseeded(input, size);
-#endif
-}
+// Wrapper no longer supplies a top-level dispatcher; per-variant unseeded
+// functions live in their respective variant files (e.g. `xxh3_64_scalar_unseeded()`).
+
 ----
 
 ==== 2.3 Scope
 
 Added unseeded variants for:
-* Single-shot: `xxh3_64_unseeded()`, `xxh3_128_unseeded()`
+* Single-shot: per-variant unseeded functions (e.g. `xxh3_64_scalar_unseeded()`, `xxh3_128_neon_unseeded()`) — wrapper does **not** provide top-level dispatcher variants.
 * All 6 SIMD variants: `xxh3_64_<variant>_unseeded()`, `xxh3_128_<variant>_unseeded()`
   - scalar, sse2, avx2, avx512 (x86)
   - neon, sve (aarch64)

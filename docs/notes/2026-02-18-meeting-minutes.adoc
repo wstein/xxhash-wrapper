@@ -1072,7 +1072,7 @@ arm64
 
 $ nm -gp build/libxxh3_wrapper.dylib | grep xxh3_64
 0000000000000c48 T _xxh3_64_scalar     ✅
-0000000000000d00 T _xxh3_64            ✅ (dispatcher)
+0000000000000d00 T _xxh3_64            ✅ (vendor symbol — wrapper no longer provides a generic dispatcher)
 0000000000006ddc T _xxh3_64_neon       ✅
 0000000000006e94 T _xxh3_64_sve        ✅ (exported unconditionally; fails at runtime on M1/M2)
 # No SSE2, AVX2, AVX512 exported ✅
@@ -1093,7 +1093,7 @@ x86_64
 
 $ nm -gp libxxh3_wrapper.so | grep xxh3_64
 00000000000023bc T xxh3_64_scalar      ✅
-0000000000002427 T xxh3_64             ✅ (dispatcher)
+0000000000002427 T xxh3_64             ✅ (vendor symbol — wrapper no longer provides a generic dispatcher)
 000000000000781e T xxh3_64_sse2        ✅
 00000000000078c0 T xxh3_64_avx2        ✅
 0000000000007962 T xxh3_64_avx512      ✅
@@ -1115,7 +1115,7 @@ aarch64
 
 $ nm -gp libxxh3_wrapper.so | grep xxh3_64
 0000000000001cc4 T xxh3_64_scalar      ✅
-0000000000001d20 T xxh3_64             ✅ (dispatcher)
+0000000000001d20 T xxh3_64             ✅ (vendor symbol — wrapper no longer provides a generic dispatcher)
 000000000000797c T xxh3_64_neon        ✅
 00000000000079fc T xxh3_64_sve         ✅
 # No SSE2, AVX2, AVX512 exported ✅

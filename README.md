@@ -51,7 +51,7 @@ The build no longer accepts a global `simd_backend` option. Each SIMD variant is
 ## Public API
 
 - XXH3 single-shot variants: `xxh3_64_<variant>()`, `xxh3_128_<variant>()` — seeded (explicit seed parameter)
-- XXH3 unseeded single-shot variants: `xxh3_64_unseeded()`, `xxh3_128_unseeded()` — dispatches to platform's best variant with seed=0
+- XXH3 unseeded single-shot variants: per-variant unseeded functions only (e.g. `xxh3_64_scalar_unseeded()`, `xxh3_64_avx2_unseeded()`). The wrapper does **not** provide generic dispatcher functions; consumers must call the desired variant directly.
 - XXH3 unseeded architecture-specific variants: `xxh3_64_<variant>_unseeded()`, `xxh3_128_<variant>_unseeded()` (sse2, avx2, avx512, neon, sve, scalar)
 - XXH3 advanced variants: `xxh3_64_withSecretandSeed()`, `xxh3_128_withSecretandSeed()` — delegate to vendor implementations (custom secret + seed)
 - Streaming API: `xxh3_64_reset/update/digest()`, `xxh3_128_reset/update/digest()` — seeded
@@ -67,7 +67,7 @@ The build no longer accepts a global `simd_backend` option. Each SIMD variant is
 Example: serialize XXH128 to a 16-byte canonical buffer
 
 ```c
-xxh3_128_t h = xxh3_128(data, len, seed);
+xxh3_128_t h = xxh3_128_scalar(data, len, seed);
 xxh128_canonical_t c;
 xxh128_canonicalFromHash(&c, h);
 /* c.digest now contains 16 bytes in big-endian order: high64 then low64 */
@@ -121,6 +121,43 @@ Available macros:
 - `XXH3_HAVE_SSE2`, `XXH3_HAVE_AVX2`, `XXH3_HAVE_AVX512` — x86 variants
 - `XXH3_HAVE_AARCH64_SIMD` — aarch64 build
 - `XXH3_HAVE_NEON`, `XXH3_HAVE_SVE` — ARM variants
+
+## Consumer Dispatch Patterns
+
+**Why no internal dispatcher?** This wrapper intentionally provides no generic `xxh3_64()` dispatcher. This design choice enforces consumer responsibility for variant selection, avoiding hidden performance overhead from implicit CPU detection and making dispatch behavior explicit and observable.
+
+**Your responsibility:** Call the variant function directly. Here are recommended patterns:
+
+**x86-64 (compile-time selection with runtime safety):**
+
+```c
+/* Simple approach: select the fastest available at compile time */
+#if XXH3_HAVE_AVX2
+    #define HASH_FUNC xxh3_64_avx2
+#elif XXH3_HAVE_SSE2
+    #define HASH_FUNC xxh3_64_sse2
+#else
+    #define HASH_FUNC xxh3_64_scalar
+#endif
+
+uint64_t hash = HASH_FUNC(data, size, seed);
+```
+
+**aarch64 (platform baseline with optional runtime check):**
+
+```c
+/* NEON is always available on aarch64; SVE requires runtime check */
+#if XXH3_HAVE_SVE
+    /* Check CPU support if targeting heterogeneous ARM platforms */
+    int supports_sve = check_sve_support();  /* Your implementation */
+    uint64_t hash = supports_sve ? xxh3_64_sve(data, size, seed)
+                                 : xxh3_64_neon(data, size, seed);
+#else
+    uint64_t hash = xxh3_64_neon(data, size, seed);
+#endif
+```
+
+**For runtime dispatch (advanced):** Implement a CPU detection function (CPUID on x86, /proc/cpuinfo or syscalls on ARM) and select `xxh3_64_sse2`, `xxh3_64_avx2`, `xxh3_64_avx512`, `xxh3_64_neon`, or `xxh3_64_sve` accordingly.
 
 ## FFI integration notes (cr-xxhash)
 

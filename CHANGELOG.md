@@ -12,9 +12,7 @@ xxHash version.
 ## [Unreleased]
 
 ### Added
-- Unseeded single-shot and streaming variants for all XXH3 functions: `xxh3_64_unseeded()`,
-  `xxh3_128_unseeded()`, `xxh3_64_reset_unseeded()`, `xxh3_128_reset_unseeded()`, plus all
-  architecture-specific variants (sse2, avx2, avx512, neon, sve, scalar)
+- Unseeded single-shot and streaming variants for all XXH3 *per-variant* symbols (e.g. `xxh3_64_scalar_unseeded()`, `xxh3_64_avx2_unseeded()`, `xxh3_128_neon_unseeded()`), `xxh3_64_reset_unseeded()`, `xxh3_128_reset_unseeded()`, plus all architecture-specific variants (sse2, avx2, avx512, neon, sve, scalar)
 - `XXH3_WRAPPER_VERSION_STRING` compile-time version string macro in `xxh3.h`
 - `XXH3_SECRET_SIZE_MIN` constant and `XXH3_ASSERT_SECRET_SIZE()` compile-time guard macro
 - Streaming APIs for `xxh32` and `xxh64`: `xxh32_reset`, `xxh32_update`, `xxh32_digest`,
